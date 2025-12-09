@@ -105,7 +105,7 @@ def generate_schema_from_prompt(prompt_text):
         model = genai.GenerativeModel('gemini-2.5-flash')
         sys_prompt = f"""
         You are a data architect. Generate a list of fields for a dataset described as: "{prompt_text}".
-        IMPORTANT: Generate maximum {MAX_FIELDS} fields only.
+        IMPORTANT: Generate maximum 10 fields only (not {MAX_FIELDS}).
         Return ONLY valid JSON array of objects with keys: "Field Name", "Type", "Context".
         Allowed Types: {", ".join(FIELD_TYPES)}.
         Context should include min/max for numbers or category options.
@@ -115,10 +115,10 @@ def generate_schema_from_prompt(prompt_text):
             clean_json = response.text.replace("```json", "").replace("```", "").strip()
             schema = json.loads(clean_json)
             
-            # Enforce field limit even if AI exceeds it
-            if len(schema) > MAX_FIELDS:
-                st.warning(f"⚠️ AI suggested {len(schema)} fields. Trimming to {MAX_FIELDS} field limit.")
-                schema = schema[:MAX_FIELDS]
+            # Enforce 10-field limit for AI suggestions
+            if len(schema) > 10:
+                st.warning(f"⚠️ AI suggested {len(schema)} fields. Trimming to 10 fields for AI autofill.")
+                schema = schema[:10]
             
             st.session_state.fields_df = pd.DataFrame(schema)
             st.rerun()
