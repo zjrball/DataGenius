@@ -1,7 +1,7 @@
 """
 Project: DataGenius
 Author: Zachary Ball
-Co-Authored By: Google Gemini & Claude AI (AI Assistants)
+Co-Authored By: Google Gemini, Claude AI, and Copilot(AI Assistants)
 
 Description:
 This application was developed with AI assistance to demonstrate modern 
@@ -437,7 +437,6 @@ Output: CSV with headers only, no markdown."""
         status_text.text("Generating synthetic data...")
         progress_bar.progress(30)
         # Local generation request
-        start_ts = time.time()
         response = model.generate_content(prompt)
         csv_text = response.text.replace("```csv", "").replace("```", "").strip()
 
