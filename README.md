@@ -13,6 +13,16 @@ Markdown
 
 ---
 
+## 🤖 AI Implementation Note
+
+This project was built using an **AI-First Workflow**.
+
+* **Role of AI:** I utilized Google Gemini as a "Pair Programmer" to generate the initial Streamlit boilerplate, debug Python errors, and draft the regex patterns for data validation.
+* **Role of Human:** I designed the application architecture, engineered the specific prompts to ensure data quality, verified the code for security (API key handling), and managed the deployment pipeline.
+* **Goal:** To demonstrate how AI tools can accelerate the development of internal tools for Data Analysis teams.
+
+---
+
 ## 📖 About The Project
 
 Data Analysts and Engineers often face a dilemma: **Real data is sensitive, but public datasets are too simple.**
