@@ -12,6 +12,12 @@ Markdown
 
 ---
 
+## ⚡ Quick Start Guide
+
+Watch the **[YouTube Tutorial](LINK_HERE)** for a step-by-step walkthrough.
+
+---
+
 ## 🤖 AI Implementation Note
 
 This project was built using an **AI-First Workflow**.
@@ -43,12 +49,6 @@ Whether you need a pristine dataset for a client demo or a broken, messy dataset
 * **🤖 AI Auto-Schema:** Type a prompt like *"Startup employee roster with equity vesting"* and watch the AI build the column structure for you.
 * **🏭 Industry Presets:** One-click templates for Finance, Healthcare, E-Commerce, and more.
 * **📥 CSV Export:** Download raw CSV files ready for SQL import, Python/R analysis, or Excel.
-
----
-
-## ⚡ Quick Start Guide
-
-Watch the **[YouTube Tutorial](LINK_HERE)** for a step-by-step walkthrough.
 
 ---
 
