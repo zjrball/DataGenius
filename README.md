@@ -10,6 +10,8 @@ Markdown
 
 <img width="1893" height="731" alt="Screenshot 2025-12-09 081843" src="https://github.com/user-attachments/assets/3731a2f3-ba8d-4d0e-a9fb-29cd7adcce64" />
 
+---
+
 ## 📖 About The Project
 
 Data Analysts and Engineers often face a dilemma: **Real data is sensitive, but public datasets are too simple.**
@@ -21,6 +23,7 @@ I built **DataGenius** to solve both. It is a Python application that uses **Goo
 
 Whether you need a pristine dataset for a client demo or a broken, messy dataset to test your cleaning scripts, DataGenius lets you simulate the exact scenario you need.   
 
+---
 
 ### Key Features
 * **🛡️ Privacy-Safe Simulation:** Generate realistic "dummy" data (names, medical diagnoses, financial transactions) that looks authentic but contains zero real user info. Perfect for public portfolios.
@@ -31,11 +34,13 @@ Whether you need a pristine dataset for a client demo or a broken, messy dataset
 * **🏭 Industry Presets:** One-click templates for Finance, Healthcare, E-Commerce, and more.
 * **📥 CSV Export:** Download raw CSV files ready for SQL import, Python/R analysis, or Excel.
 
+---
+
 ## 🚀 How to Run Locally
 
 You can run this tool on your own machine in 3 simple steps.
 
-### Prerequisites
+#### Prerequisites
 * Python 3.8 or higher
 * A free [Google Gemini API Key](https://aistudio.google.com/)
 
@@ -69,6 +74,7 @@ Bash
 ```
 streamlit run app.py
 ```
+---
 
 ### 🛠️ Tech Stack
 Frontend: Streamlit (Python-based UI)
@@ -76,6 +82,8 @@ Frontend: Streamlit (Python-based UI)
 AI Engine: Google Gemini 2.5 Flash (via google-generativeai)
 
 Data Handling: Pandas
+
+---
 
 ### 📂 Project Structure
 ```
@@ -87,6 +95,8 @@ DataGenius/
 └── .streamlit/
     └── secrets.toml       # API Keys (Local only, NOT on GitHub)
 ```
+--- 
+
 ### 🧠 Prompt Engineering
 A key part of this project was designing the prompts to ensure the AI generates structured CSV data rather than conversational text.
 
@@ -95,6 +105,8 @@ Challenge: LLMs love to chat.
 Solution: I used strict system instructions and temperature controls to force the model to output purely valid CSV strings.
 
 Privacy by Design: The prompts explicitly instruct the model to generate fictional entities, ensuring no real PII is ever leaked into the output.
+
+---
 
 ### 🤝 Contributing
 Contributions are welcome! If you have ideas for new "Messy Data" types (e.g., specific SQL injection errors or encoding issues), feel free to fork the repo and submit a Pull Request.
@@ -109,13 +121,18 @@ Push to the Branch (git push origin feature/NewMessiness)
 
 Open a Pull Request
 
+---
+
 ### 💎 Acknowledgments
 Google Gemini: This project was co-coded with the assistance of Google Gemini. It acted as a "Pair Programmer," helping to generate the initial Streamlit architecture, debug Python errors, and refine the data generation prompts.
 
 Streamlit Community: For providing the framework that makes deploying Python data tools effortless.
 
+---
+
 ### 📄 License
 Distributed under the MIT License. See LICENSE for more information.
-<hr>
+
+---
 
 Built with 💻 and ☕ by Zachary Ball
