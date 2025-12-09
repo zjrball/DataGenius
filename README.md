@@ -82,6 +82,10 @@ Frontend: Streamlit (Python-based UI)
 
 AI Engine: Google Gemini 2.5 Flash (via google-generativeai)
 
+AI Coding Assistants/Agent Usage:
+* [VSCode Claude Haiku 4.5](https://www.anthropic.com/)
+* [Google Gemini](https://gemini.google.com/app)
+
 Data Handling: Pandas
 
 ---
