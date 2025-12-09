@@ -52,6 +52,7 @@ if api_key:
     genai.configure(api_key=api_key)
 
 # --- Constants ---
+MAX_FIELDS = 15
 FIELD_TYPES = [
     "String", "Number", "Date", "Boolean", "Currency", 
     "UUID", "Email", "Name", "Category", "Status", "Timestamp"
@@ -117,10 +118,68 @@ def generate_schema_from_prompt(prompt_text):
         except Exception as e:
             st.error(f"Failed to generate schema: {e}")
 
+def preview_dataset(industry, quality, fields_data):
+    """Generates a quick 10-row preview of the dataset."""
+    if not api_key:
+        st.error("API Key required")
+        return
+    
+    # Enforce field limit
+    if len(fields_data) > MAX_FIELDS:
+        st.error(f"❌ Maximum {MAX_FIELDS} fields allowed. You have {len(fields_data)} fields.")
+        return
+
+    model = genai.GenerativeModel('gemini-2.5-flash')
+    
+    # Construct schema description
+    field_desc = []
+    for _, row in fields_data.iterrows():
+        field_desc.append(f"{row['Field Name']} ({row['Type']}): {row['Context']}")
+    
+    quality_prompt = (
+        "Strictly clean data. Standard formats. No nulls." 
+        if quality == "Clean" 
+        else "Messy data. 10% nulls. Occasional typos. Mixed date formats."
+    )
+
+    prompt = f"""
+    Generate a CSV dataset for '{industry}'.
+    Rows: 10
+    Quality Rules: {quality_prompt}
+    
+    Columns:
+    {"; ".join(field_desc)}
+    
+    Output ONLY raw CSV content. Include headers.
+    """
+
+    status_text = st.empty()
+
+    try:
+        status_text.text("Generating preview...")
+        response = model.generate_content(prompt)
+        csv_text = response.text.replace("```csv", "").replace("```", "").strip()
+        
+        # Parse and display
+        df = pd.read_csv(io.StringIO(csv_text))
+        st.session_state.generated_data = df
+        st.session_state.analysis_ideas = []
+        
+        status_text.empty()
+        st.rerun()
+
+    except Exception as e:
+        st.error(f"Preview failed: {e}")
+
 def generate_dataset(industry, rows, quality, fields_data):
     """Generates the actual CSV data."""
     if not api_key:
         st.error("API Key required")
+        return
+    
+    # Enforce field limit
+    if len(fields_data) > MAX_FIELDS:
+        st.error(f"❌ Maximum {MAX_FIELDS} fields allowed to manage token usage. You have {len(fields_data)} fields.")
         return
 
     model = genai.GenerativeModel('gemini-2.5-flash')
@@ -213,6 +272,7 @@ with st.sidebar:
     
     st.divider()
     
+    preview_btn = st.button("👁️ Preview (10 rows)", use_container_width=True)
     generate_btn = st.button("🚀 Generate Data", use_container_width=True, type="primary")
 
 # Main Content
@@ -229,10 +289,14 @@ with st.expander("✨ AI Auto-Fill Schema"):
         if st.button("Auto-Fill"):
             generate_schema_from_prompt(ai_prompt)
 
-# Field Editor
+# Field Editor with limit indicator
+field_count = len(st.session_state.fields_df)
+field_limit_color = "🟢" if field_count <= MAX_FIELDS else "🔴"
+st.caption(f"{field_limit_color} Fields: {field_count}/{MAX_FIELDS}")
+
 edited_df = st.data_editor(
     st.session_state.fields_df,
-    num_rows="dynamic",
+    num_rows="dynamic" if field_count < MAX_FIELDS else "fixed",
     use_container_width=True,
     column_config={
         "Type": st.column_config.SelectboxColumn(
@@ -247,9 +311,22 @@ edited_df = st.data_editor(
     }
 )
 
+if field_count >= MAX_FIELDS:
+    st.info(f"ℹ️ Field limit ({MAX_FIELDS}) reached. Remove fields to add more.")
+
+# Handle Preview Trigger
+if preview_btn:
+    if len(edited_df) > MAX_FIELDS:
+        st.error(f"❌ Cannot generate: {len(edited_df)} fields exceed the {MAX_FIELDS} field limit.")
+    else:
+        preview_dataset(selected_preset, data_quality, edited_df)
+
 # Handle Generation Trigger
 if generate_btn:
-    generate_dataset(selected_preset, row_count, data_quality, edited_df)
+    if len(edited_df) > MAX_FIELDS:
+        st.error(f"❌ Cannot generate: {len(edited_df)} fields exceed the {MAX_FIELDS} field limit.")
+    else:
+        generate_dataset(selected_preset, row_count, data_quality, edited_df)
 
 # Results Section
 if st.session_state.generated_data is not None:
