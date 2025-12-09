@@ -64,7 +64,7 @@ if api_key:
 
 # --- Constants ---
 MAX_FIELDS = 15
-ESTIMATED_TIME_PER_100_ROWS = 65  # seconds (based on 20 rows = 13 seconds actual)
+ESTIMATED_TIME_PER_100_ROWS = 126  # seconds (based on 50 rows = 63 seconds actual)
 FIELD_TYPES = [
     "String", "Number", "Date", "Boolean", "Currency", 
     "UUID", "Email", "Name", "Category", "Status", "Timestamp"
@@ -107,11 +107,13 @@ if "analysis_ideas" not in st.session_state:
 
 # --- Logic ---
 
-def calculate_eta(row_count, include_analysis=False):
+def calculate_eta(row_count, include_analysis=False, field_count=1):
     """Calculate estimated time to generate dataset."""
     base_time = 3  # Base overhead in seconds
     row_time = (row_count / 100) * ESTIMATED_TIME_PER_100_ROWS
-    total_seconds = int(base_time + row_time)
+    # Add 0.5 seconds per field for processing complexity
+    field_time = field_count * 0.5
+    total_seconds = int(base_time + row_time + field_time)
     
     # Double the time if analysis is included
     if include_analysis:
@@ -322,7 +324,7 @@ with st.sidebar:
     include_analysis = st.checkbox("Include Analysis Ideas", value=False, help="Uncheck to speed up generation")
     
     # Display ETA
-    eta = calculate_eta(row_count, include_analysis)
+    eta = calculate_eta(row_count, include_analysis, len(st.session_state.fields_df))
     st.caption(f"⏱️ Estimated time: {eta}")
     
     st.divider()
