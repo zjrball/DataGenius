@@ -53,6 +53,7 @@ if api_key:
 
 # --- Constants ---
 MAX_FIELDS = 15
+ESTIMATED_TIME_PER_100_ROWS = 8  # seconds (rough estimate for Gemini API)
 FIELD_TYPES = [
     "String", "Number", "Date", "Boolean", "Currency", 
     "UUID", "Email", "Name", "Category", "Status", "Timestamp"
@@ -94,6 +95,19 @@ if "analysis_ideas" not in st.session_state:
     st.session_state.analysis_ideas = []
 
 # --- Logic ---
+
+def calculate_eta(row_count):
+    """Calculate estimated time to generate dataset."""
+    base_time = 3  # Base overhead in seconds
+    row_time = (row_count / 100) * ESTIMATED_TIME_PER_100_ROWS
+    total_seconds = int(base_time + row_time)
+    
+    if total_seconds < 60:
+        return f"{total_seconds}s"
+    else:
+        minutes = total_seconds // 60
+        seconds = total_seconds % 60
+        return f"{minutes}m {seconds}s"
 
 def generate_schema_from_prompt(prompt_text):
     """Uses Gemini to hallucinate a schema based on user description."""
@@ -282,6 +296,10 @@ with st.sidebar:
     
     row_count = st.slider("Row Count", 10, 100, 50)
     data_quality = st.radio("Data Quality", ["Clean", "Dirty"], index=0)
+    
+    # Display ETA
+    eta = calculate_eta(row_count)
+    st.caption(f"⏱️ Estimated time: {eta}")
     
     st.divider()
     
