@@ -105,6 +105,7 @@ def generate_schema_from_prompt(prompt_text):
         model = genai.GenerativeModel('gemini-2.5-flash')
         sys_prompt = f"""
         You are a data architect. Generate a list of fields for a dataset described as: "{prompt_text}".
+        IMPORTANT: Generate maximum {MAX_FIELDS} fields only.
         Return ONLY valid JSON array of objects with keys: "Field Name", "Type", "Context".
         Allowed Types: {", ".join(FIELD_TYPES)}.
         Context should include min/max for numbers or category options.
@@ -113,6 +114,12 @@ def generate_schema_from_prompt(prompt_text):
             response = model.generate_content(sys_prompt)
             clean_json = response.text.replace("```json", "").replace("```", "").strip()
             schema = json.loads(clean_json)
+            
+            # Enforce field limit even if AI exceeds it
+            if len(schema) > MAX_FIELDS:
+                st.warning(f"⚠️ AI suggested {len(schema)} fields. Trimming to {MAX_FIELDS} field limit.")
+                schema = schema[:MAX_FIELDS]
+            
             st.session_state.fields_df = pd.DataFrame(schema)
             st.rerun()
         except Exception as e:
@@ -302,7 +309,7 @@ st.caption(f"{field_limit_color} Fields: {field_count}/{MAX_FIELDS}")
 
 edited_df = st.data_editor(
     st.session_state.fields_df,
-    num_rows="dynamic" if field_count < MAX_FIELDS else "fixed",
+    num_rows="dynamic",
     use_container_width=True,
     column_config={
         "Type": st.column_config.SelectboxColumn(
@@ -316,6 +323,9 @@ edited_df = st.data_editor(
         )
     }
 )
+
+# Update session state when rows are edited or deleted
+st.session_state.fields_df = edited_df
 
 if field_count >= MAX_FIELDS:
     st.info(f"ℹ️ Field limit ({MAX_FIELDS}) reached. Remove fields to add more.")
