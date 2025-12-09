@@ -16,7 +16,7 @@ Markdown
 
 This project was built using an **AI-First Workflow**.
 
-* **Role of AI:** I utilized Google Gemini as a "Pair Programmer" to generate the initial Streamlit boilerplate, debug Python errors, and draft the regex patterns for data validation.
+* **Role of AI:** I utilized Google Gemini & Github Copilot as "Pair Programmers" to generate the initial Streamlit boilerplate, debug Python errors, and draft the regex patterns for data validation.
 * **Role of Human:** I designed the application architecture, engineered the specific prompts to ensure data quality, verified the code for security (API key handling), and managed the deployment pipeline.
 * **Goal:** To demonstrate how AI tools can accelerate the development of internal tools for Data Analysis teams.
 
@@ -46,6 +46,12 @@ Whether you need a pristine dataset for a client demo or a broken, messy dataset
 
 ---
 
+## ⚡ Quick Start Guide
+
+Watch the **[YouTube Tutorial](LINK_HERE)** for a step-by-step walkthrough.
+
+---
+
 ## 🚀 How to Run Locally
 For a compact step-by-step guide, see [RUN_LOCAL.md](https://github.com/zjrball/DataGenius/blob/main/RUN_LOCAL.md).
 
@@ -61,7 +67,7 @@ Minimal steps (Windows PowerShell)
 
 1) Clone the repo
 ```powershell
-git clone https://github.com/YOUR-USERNAME/DataGenius.git
+git clone https://github.com/zjrball/DataGenius.git
 cd DataGenius
 ```
 
@@ -137,6 +143,7 @@ DataGenius/
 ├── requirements.txt       # Python dependencies
 ├── .gitignore             # Security rules (hides secrets)
 ├── README.md              # Documentation
+├── RUN_LOCAL.md           # Documentation
 └── .streamlit/
     └── secrets.toml       # API Keys (Local only, NOT on GitHub)
 ```
