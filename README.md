@@ -5,6 +5,7 @@ Markdown
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://datageniuses.streamlit.app/)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![Gemini API](https://img.shields.io/badge/AI-Google%20Gemini-orange)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > **Simulate reality, safely.** DataGenius uses AI to generate realistic datasets on demand—solving privacy risks while giving you full control over data quality (Clean vs. Dirty).
 
