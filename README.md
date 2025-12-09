@@ -65,10 +65,18 @@ git clone https://github.com/YOUR-USERNAME/DataGenius.git
 cd DataGenius
 ```
 
-2) Create and activate a virtual environment
+2) Create and activate a virtual environment 
+
+###### *Windows*
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.\.venv\Scripts\activate
+```
+
+###### *Mac/Linux*
+```
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
 3) Install dependencies
