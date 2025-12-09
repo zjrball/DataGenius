@@ -1,6 +1,6 @@
 """
 Project: DataGenius
-Author: [Your Name]
+Author: Zachary Ball
 Co-Authored By: Google Gemini & Claude AI (AI Assistants)
 
 Description:
@@ -8,7 +8,6 @@ This application was developed with AI assistance to demonstrate modern
 rapid-prototyping workflows. While the code logic was augmented by AI, 
 all outputs have been manually reviewed and tested for accuracy and security.
 """
-
 
 import streamlit as st
 import google.generativeai as genai
