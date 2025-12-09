@@ -147,10 +147,10 @@ def preview_dataset(industry, quality, fields_data):
     Rows: 10
     Quality Rules: {quality_prompt}
     
-    Columns:
+    Columns (exactly {len(field_desc)} fields):
     {"; ".join(field_desc)}
     
-    Output ONLY raw CSV content. Include headers.
+    CRITICAL: Output ONLY valid CSV with exactly {len(field_desc)} columns per row. Include headers. No markdown formatting.
     """
 
     status_text = st.empty()
@@ -160,13 +160,19 @@ def preview_dataset(industry, quality, fields_data):
         response = model.generate_content(prompt)
         csv_text = response.text.replace("```csv", "").replace("```", "").strip()
         
-        # Parse and display
-        df = pd.read_csv(io.StringIO(csv_text))
-        st.session_state.generated_data = df
-        st.session_state.analysis_ideas = []
-        
-        status_text.empty()
-        st.rerun()
+        # Parse and display with error handling
+        try:
+            df = pd.read_csv(io.StringIO(csv_text), on_bad_lines='skip')
+            if len(df) == 0:
+                st.error("Preview failed: No valid rows generated. Please try again.")
+                return
+            st.session_state.generated_data = df
+            st.session_state.analysis_ideas = []
+            status_text.empty()
+            st.rerun()
+        except pd.errors.ParserError as parse_err:
+            st.error(f"Preview failed: CSV parsing error. {str(parse_err)}")
+            return
 
     except Exception as e:
         st.error(f"Preview failed: {e}")
