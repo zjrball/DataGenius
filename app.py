@@ -334,10 +334,11 @@ if st.session_state.generated_data is not None:
     st.subheader("Results")
     
     # Analysis Ideas
-    cols = st.columns(len(st.session_state.analysis_ideas))
-    for i, idea in enumerate(st.session_state.analysis_ideas):
-        with cols[i]:
-            st.info(idea)
+    if st.session_state.analysis_ideas:
+        cols = st.columns(len(st.session_state.analysis_ideas))
+        for i, idea in enumerate(st.session_state.analysis_ideas):
+            with cols[i]:
+                st.info(idea)
 
     # Data Preview
     st.dataframe(st.session_state.generated_data, use_container_width=True)
