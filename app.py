@@ -16,8 +16,6 @@ import json
 import io
 import time
 import os
-import logging
-from datetime import datetime
 
 # --- Configuration ---
 st.set_page_config(
@@ -27,56 +25,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 🔒 Optional Gatekeeper (password protection) ---
-# If you set `ACCESS_CODE` in `st.secrets`, the app will require users to
-# enter that code before proceeding. This is useful for public demos to
-# reduce bot abuse and accidental API key consumption.
-def check_password():
-    """Returns True if the user has entered the correct access code.
-
-    Behaviour:
-    - If `ACCESS_CODE` is present in `st.secrets`, show a small password
-      UI and require it. If absent, the function returns True and the
-      app proceeds unguarded (useful for local development).
-    """
-
-    # If no access code configured, don't gate the app.
-    if "ACCESS_CODE" not in st.secrets:
-        return True
-
-    def password_entered():
-        # Callback executed when user types the password.
-        if st.session_state.get("password") == st.secrets["ACCESS_CODE"]:
-            st.session_state["password_correct"] = True
-            # Remove the raw password from session state for safety.
-            del st.session_state["password"]
-        else:
-            st.session_state["password_correct"] = False
-
-    # 1) Already authenticated
-    if st.session_state.get("password_correct", False):
-        return True
-
-    # 2) Show the input box
-    st.markdown("## 🔐 Restricted Access")
-    st.markdown("To prevent bot abuse and manage API costs, this live demo is password protected.")
-    st.info("💡 **Want to try it?** Ask the repo owner for the access code.")
-
-    st.text_input("Enter Access Code", type="password", on_change=password_entered, key="password")
-
-    # 3) Show error if entered and incorrect
-    if st.session_state.get("password_correct", False) is False and "password" in st.session_state:
-        st.error("😕 Incorrect access code. Please try again.")
-
-    return False
-
-
-# Stop early if an access code is configured and the user hasn't authenticated.
-if "ACCESS_CODE" in st.secrets and not check_password():
-    st.stop()
-elif "ACCESS_CODE" not in st.secrets:
-    # Helpful hint for maintainers: configure an access code for public demos.
-    st.sidebar.info("No access code configured. Set `ACCESS_CODE` in `st.secrets` to enable password protection.")
+# For local-only usage we do not include a password gate. Keep the UI
+# minimal so users can clone and run the app locally with their own key.
 
 # Styling to match the dark aesthetic
 st.markdown("""
@@ -97,88 +47,27 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- API Key Handling (Cloud vs Local) ---
-# We support two ways to supply the Gemini API key:
-# 1) `st.secrets["GOOGLE_API_KEY"]` for cloud/hosted deployments (secure).
-# 2) Manual entry in the sidebar for local development.
-# The app will first prefer the hosted secret and fall back to the sidebar input.
-api_key = None
+# --- API Key Handling (Local-first) ---
+# This app is intended for local use. Prefer an environment variable
+# (`GOOGLE_API_KEY`) or pasting a personal key into the sidebar. Avoid
+# relying on framework-backed hosted keys when sharing the repository.
+api_key = os.getenv("GOOGLE_API_KEY")
 
-# If deployed to Streamlit Cloud or another host, put the key in `st.secrets`.
-if "GOOGLE_API_KEY" in st.secrets:
-    api_key = st.secrets["GOOGLE_API_KEY"]
-
-# If no hosted key found, ask the developer/user to paste it locally.
+# Ask the user to paste their personal key if not provided via env var.
 if not api_key:
-    # Local entry is intentionally a password field so the key isn't shown on-screen.
-    api_key = st.sidebar.text_input("Gemini API Key", type="password")
-else:
-    # Visual cue for hosted key usage. Non-essential UI affordance.
-    with st.sidebar:
-        st.success("✅ Hosted Key Active")
+    api_key = st.sidebar.text_input(
+        "Gemini API Key",
+        type="password",
+        help="Paste your Gemini API key here for local use.",
+    )
 
-# Configure the Google Generative AI client with the provided key. Many
-# functions below call `genai.GenerativeModel` and require this configuration.
+# Configure the Google Generative AI client with the provided key.
 if api_key:
     genai.configure(api_key=api_key)
 
-# `show_debug` will be configured by a sidebar checkbox so operators can
-# enable detailed errors during development. Default is False.
-show_debug = False
-
-# --- Logging & Telemetry (opt-in) ---
-# Configure a console logger for structured, non-sensitive events. We
-# intentionally never log secrets or raw model outputs.
-logger = logging.getLogger("datagen")
-if not logger.handlers:
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('{"time":"%(asctime)s","level":"%(levelname)s","msg":"%(message)s"}')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-logger.setLevel(logging.INFO)
-
-# Telemetry persistence is disabled by default. Enable by setting
-# `ENABLE_TELEMETRY` in `st.secrets` to 'true' or by setting the
-# environment variable `ENABLE_TELEMETRY=true`.
-telemetry_enabled = False
-telemetry_flag = None
-if "ENABLE_TELEMETRY" in st.secrets:
-    telemetry_flag = str(st.secrets.get("ENABLE_TELEMETRY")).lower()
-elif os.getenv("ENABLE_TELEMETRY"):
-    telemetry_flag = os.getenv("ENABLE_TELEMETRY").lower()
-
-if telemetry_flag == "true":
-    telemetry_enabled = True
-
-# Telemetry file (only used if telemetry_enabled=True). Keep minimal info.
-telemetry_file = os.path.join(os.getcwd(), "telemetry.log")
-
-def log_event(event_name: str, details: dict):
-    """Log a structured event to console and optionally persist minimal telemetry.
-
-    This function must never include secrets or raw model outputs in the
-    logged data. Only include high-level metadata useful for debugging and
-    monitoring (counts, durations, non-sensitive flags).
-    """
-    timestamp = datetime.utcnow().isoformat() + "Z"
-    entry = {"ts": timestamp, "event": event_name, "details": details}
-
-    # Console log (safe, non-persistent)
-    try:
-        logger.info(json.dumps(entry))
-    except Exception:
-        # Fallback: log a simple message
-        logger.info(f"{timestamp} - {event_name}")
-
-    # Optionally persist anonymized telemetry (append-only). Don't store
-    # raw model text or API keys.
-    if telemetry_enabled:
-        try:
-            with open(telemetry_file, "a", encoding="utf-8") as f:
-                f.write(json.dumps(entry) + "\n")
-        except Exception:
-            # Avoid raising errors from telemetry writes.
-            logger.warning("Failed to write telemetry entry")
+# In local mode we display exceptions to help developers iterate quickly.
+# Note: telemetry/timing persistence was intentionally removed; the app
+# does not write usage logs or telemetry to disk.
 
 # --- Helpers: model cache and schema validation ---
 # Cache model instance to avoid re-instantiation across calls.
@@ -213,12 +102,8 @@ def validate_schema(schema):
             return False, f"Invalid Type '{item['Type']}' at index {idx}. Allowed: {', '.join(FIELD_TYPES)}"
     return True, None
 
-# --- Limits & rate limiting ---
-# Maximum rows allowed for generation (sensible cap to limit cost).
-MAX_ROWS = 500
-# Rate limiter: max generation calls per window (seconds)
-GEN_CALL_LIMIT = 3
-GEN_WINDOW_SECONDS = 300  # 5 minutes
+# --- Limits ---
+# Keep generation limits conservative by default; main cap is `MAX_FIELDS`.
 
 # --- Constants ---
 # `MAX_FIELDS` is a hard cap to prevent large schemas that drive up token
@@ -266,9 +151,6 @@ if "fields_df" not in st.session_state:
 
 if "generated_data" not in st.session_state:
     st.session_state.generated_data = None
-
-# Note: analysis/telemetry features were deliberately removed for public
-# release to avoid persisting usage data locally.
 
 # --- Logic ---
 
@@ -331,9 +213,6 @@ def _sanitize_dataframe_for_csv(df: pd.DataFrame) -> pd.DataFrame:
 
     return df_safe
 
-
-# Timing logging removed for public release to avoid storing local usage data
-
 def generate_schema_from_prompt(prompt_text):
     """Ask the model to propose a small schema from a short description.
 
@@ -351,8 +230,6 @@ def generate_schema_from_prompt(prompt_text):
 
     with st.spinner("Dreaming up schema..."):
         model = get_model()
-        # Log the schema request (no sensitive content)
-        log_event("schema_request", {"prompt_len": len(prompt_text or ""), "max_suggest": 10})
         # System prompt: be explicit and restrictive. In many cases the model
         # produces helpful output but can also include prose or wrappers; we
         # instruct it to return only a JSON array so parsing is more reliable.
@@ -374,16 +251,12 @@ def generate_schema_from_prompt(prompt_text):
             try:
                 schema = json.loads(clean_json)
             except json.JSONDecodeError as jde:
-                # Parsing failed: surface a helpful debug message when the
-                # operator has enabled debug mode. Show a truncated sample of
-                # the model output to help diagnose formatting issues.
-                if show_debug:
-                    sample = (raw_text[:1000] + "...") if len(raw_text) > 1000 else raw_text
-                    st.error("Failed to parse model JSON output. Sample below (truncated):")
-                    st.code(sample)
-                    st.exception(jde)
-                else:
-                    st.error("Failed to parse model output. Enable 'Show debug details' to inspect the raw model response.")
+                # Parsing failed: show a truncated sample and the JSON error
+                # so local developers can quickly iterate on prompts.
+                sample = (raw_text[:1000] + "...") if len(raw_text) > 1000 else raw_text
+                st.error("Failed to parse model JSON output. Sample below (truncated):")
+                st.code(sample)
+                st.exception(jde)
                 return
 
             # Validate schema structure before accepting it. This prevents
@@ -391,15 +264,11 @@ def generate_schema_from_prompt(prompt_text):
             # session state.
             valid, msg = validate_schema(schema)
             if not valid:
-                # If debug mode is enabled, show the raw sample to help
-                # diagnose the issue; otherwise show a concise message.
-                log_event("schema_validation_failed", {"reason": msg})
-                if show_debug:
-                    sample = (raw_text[:1000] + "...") if len(raw_text) > 1000 else raw_text
-                    st.error(f"Schema validation failed: {msg}")
-                    st.code(sample)
-                else:
-                    st.error(f"Schema validation failed: {msg}")
+                # Show the failing reason and a short sample to help local
+                # debugging and prompt tuning.
+                sample = (raw_text[:1000] + "...") if len(raw_text) > 1000 else raw_text
+                st.error(f"Schema validation failed: {msg}")
+                st.code(sample)
                 return
 
             # Safety: trim overly large AI suggestions to 10 items. We show a
@@ -412,26 +281,20 @@ def generate_schema_from_prompt(prompt_text):
             # fields but left invalid items).
             valid_trim, msg_trim = validate_schema(schema)
             if not valid_trim:
-                log_event("schema_validation_failed_after_trim", {"reason": msg_trim})
                 st.error(f"Trimmed schema invalid: {msg_trim}")
                 return
 
-            # Telemetry: record how many suggestions the model provided (no
-            # content is stored).
-            log_event("schema_suggested", {"suggested_count": len(schema)})
+            # Record suggested count in-memory only.
 
             # Persist the proposed schema to session state and force a
             # rerun so the editor UI reflects the new rows immediately.
             st.session_state.fields_df = pd.DataFrame(schema)
             st.rerun()
         except Exception as e:
-            # Network errors or model errors may surface here. Show full
-            # traceback only when debug is explicitly enabled.
-            log_event("schema_error", {"error": str(type(e).__name__)})
-            if show_debug:
-                st.exception(e)
-            else:
-                st.error("Failed to generate schema: model request failed. Enable 'Show debug details' for more info.")
+            # Network errors or model errors may surface here. Show traceback
+            # for local debugging.
+            st.exception(e)
+            st.error("Failed to generate schema: model request failed.")
 
 
 def preview_dataset(industry, quality, fields_data, dirty_percentage=10):
@@ -498,9 +361,6 @@ def preview_dataset(industry, quality, fields_data, dirty_percentage=10):
         # Request preview from the model and aggressively strip common
         # markdown wrappers. We still protect parsing with pandas.
         status_text.text("Generating preview...")
-        # Emit a safe event: a preview was requested. Do not include keys
-        # or raw prompts in logs.
-        log_event("preview_request", {"preset": industry, "quality": quality, "fields": len(field_desc), "rows": 10})
         response = model.generate_content(prompt)
         csv_text = response.text.replace("```csv", "").replace("```", "").strip()
 
@@ -519,21 +379,16 @@ def preview_dataset(industry, quality, fields_data, dirty_percentage=10):
             # download.
             df_safe = _sanitize_dataframe_for_csv(df)
             st.session_state.generated_data = df_safe
-            # Telemetry: report how many rows parsed successfully (no data).
-            log_event("preview_result", {"rows_produced": len(df_safe), "fields": len(df_safe.columns)})
             status_text.empty()
             # Force UI refresh so the Results panel appears with the preview.
             st.rerun()
         except Exception as parse_err:
-            log_event("preview_parse_error", {"error": str(type(parse_err).__name__)})
-            if show_debug:
-                st.exception(parse_err)
+            st.exception(parse_err)
             st.error("Preview failed: CSV parsing error. The AI output may be malformed — try refining your schema.")
             return
 
     except Exception as e:
-        if show_debug:
-            st.exception(e)
+        st.exception(e)
         st.error("Preview failed: model request failed. Check API key and network.")
 
 def generate_dataset(industry, rows, quality, fields_data, dirty_percentage=10):
@@ -552,24 +407,7 @@ def generate_dataset(industry, rows, quality, fields_data, dirty_percentage=10):
         st.error(f"❌ Maximum {MAX_FIELDS} fields allowed to manage token usage. You have {len(fields_data)} fields.")
         return
 
-    # --- Rate limiting (per-session) ---
-    now_ts = time.time()
-    gen_calls = st.session_state.get("generate_timestamps", [])
-    # Keep only timestamps within the window
-    gen_calls = [t for t in gen_calls if now_ts - t < GEN_WINDOW_SECONDS]
-    if len(gen_calls) >= GEN_CALL_LIMIT:
-        # Too many recent generate calls
-        st.error(f"Rate limit: Maximum {GEN_CALL_LIMIT} generation requests allowed every {GEN_WINDOW_SECONDS//60} minutes. Try again later.")
-        log_event("rate_limited", {"type": "generate", "recent_calls": len(gen_calls)})
-        return
-    # Record this attempt now (will be saved after checks)
-    gen_calls.append(now_ts)
-    st.session_state["generate_timestamps"] = gen_calls
-
-    # Clamp rows to a hard maximum to prevent excessive token use
-    if rows > MAX_ROWS:
-        st.warning(f"Requested rows ({rows}) exceed maximum allowed ({MAX_ROWS}). Clamping to {MAX_ROWS} rows.")
-        rows = MAX_ROWS
+    # No rate limiting in local mode; local users are expected to manage their own API usage.
 
     model = get_model()
     
@@ -598,8 +436,7 @@ Output: CSV with headers only, no markdown."""
         # 1. Generate Data: request CSV text from the model.
         status_text.text("Generating synthetic data...")
         progress_bar.progress(30)
-        # Log a safe generation request event (no secrets or raw output).
-        log_event("generate_request", {"preset": industry, "rows": rows, "fields": len(field_desc), "quality": quality})
+        # Local generation request
         start_ts = time.time()
         response = model.generate_content(prompt)
         csv_text = response.text.replace("```csv", "").replace("```", "").strip()
@@ -616,13 +453,10 @@ Output: CSV with headers only, no markdown."""
             # Sanitize before storing/downloading to mitigate CSV injection.
             df_safe = _sanitize_dataframe_for_csv(df)
             st.session_state.generated_data = df_safe
-            log_event("generate_result", {"rows_produced": len(df_safe), "fields": len(df_safe.columns)})
+            # Generation succeeded (local only)
         except Exception as parse_err:
-            # Provide a clear message and optionally reveal the exception when
-            # debugging is enabled.
-            if show_debug:
-                st.exception(parse_err)
-            log_event("generate_parse_error", {"error": str(type(parse_err).__name__)})
+            # Provide a clear message and reveal the exception for local debugging.
+            st.exception(parse_err)
             st.error("Generation failed: CSV parsing error. The AI may have generated inconsistent data or used unexpected formatting.")
             return
 
@@ -634,8 +468,7 @@ Output: CSV with headers only, no markdown."""
         st.rerun()
 
     except Exception as e:
-        if show_debug:
-            st.exception(e)
+        st.exception(e)
         st.error("Generation failed: model request failed. Check API key and network.")
 
 # --- UI Layout ---
@@ -671,18 +504,7 @@ with st.sidebar:
     
     st.divider()
     
-    # Warn operators if a hosted API key is active. Hosting a key on a
-    # public deployment can allow anyone with access to consume the key
-    # and incur costs — prefer per-user keys for public services.
-    if "GOOGLE_API_KEY" in st.secrets:
-        st.warning(
-            "Using a hosted API key: ensure this deployment is private or restrict usage."
-        )
-
-    # Developer aid: allow showing detailed errors when debugging locally.
-    # Keep disabled by default for safety in public-facing deployments.
-    show_debug = st.checkbox("Show debug details", value=False, help="Reveal error traces for debugging only")
-
+    # Developer aid: exceptions are shown in the UI for local debugging.
     preview_btn = st.button("👁️ Preview (10 rows)", use_container_width=True)
     generate_btn = st.button("🚀 Generate Data", use_container_width=True, type="primary")
 

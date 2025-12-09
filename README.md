@@ -48,43 +48,64 @@ Whether you need a pristine dataset for a client demo or a broken, messy dataset
 ---
 
 ## 🚀 How to Run Locally
+You can run this tool locally and ask other users to clone the repo and
+run it with their own API keys. The app intentionally prefers a local
+workflow to avoid accidental public key exposure.
 
-You can run this tool on your own machine in 3 simple steps.
+Prerequisites
+- Python 3.8 or higher
+- A Google Gemini API Key
 
-#### Prerequisites
-* Python 3.8 or higher
-* A free [Google Gemini API Key](https://aistudio.google.com/)
+Minimal steps (Windows PowerShell)
 
-#### 1. Clone the Repository
-``` in bash
-git clone [https://github.com/YOUR-USERNAME/gaming-data-generator.git](https://github.com/YOUR-USERNAME/gaming-data-generator.git)
-cd gaming-data-generator
+1) Clone the repo
+```powershell
+git clone https://github.com/YOUR-USERNAME/DataGenius.git
+cd DataGenius
 ```
 
-#### 2. Install Dependencies 
-``` in bash 
-pip install -r requirements.txt
+2) Create and activate a virtual environment
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 ```
 
-#### 3. Configure API Key
-
-To keep your key safe, this app uses Streamlit Secrets.
-
-Create a folder named .streamlit in the project root.
-
-Inside it, create a file named secrets.toml.
-
-Inside the file, add your key like this:
-```
-GOOGLE_API_KEY = "AIzaSyD_YOUR_ACTUAL_KEY_HERE"
+3) Install dependencies
+```powershell
+pip install -r .\requirements.txt
 ```
 
-#### 4. Launch the App
+4) Provide your Gemini API key
 
-Bash
+Preferred (temporary session variable):
+```powershell
+$Env:GOOGLE_API_KEY = "your_gemini_key_here"
 ```
-streamlit run app.py
+
+Or paste your API key into the sidebar when the app launches. The app
+is designed to avoid using keys placed in `st.secrets` unless you opt-in
+explicitly (this prevents accidentally exposing a hosted key in a demo).
+
+Optional: local `secrets.toml` for convenience (only for local use)
+
+Create a `.streamlit\secrets.toml` file with this content for local
+development (do NOT commit this file):
+```toml
+GOOGLE_API_KEY = "your_gemini_key_here"
+ACCESS_CODE = "demo123"  # optional: set an access code for demos
 ```
+
+5) Run the app
+```powershell
+streamlit run .\app.py
+```
+
+Notes
+- This project is intended to be run locally. For public demos, ask
+    visitors to `git clone` and run with their own keys rather than
+    hosting a deployment with a shared `GOOGLE_API_KEY`.
+- The app will warn and require explicit consent before using any
+    `st.secrets`-provided API key.
 ---
 
 ### 🛠️ Tech Stack
