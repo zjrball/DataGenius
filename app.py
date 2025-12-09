@@ -53,7 +53,7 @@ if api_key:
 
 # --- Constants ---
 MAX_FIELDS = 15
-ESTIMATED_TIME_PER_100_ROWS = 8  # seconds (rough estimate for Gemini API)
+ESTIMATED_TIME_PER_100_ROWS = 65  # seconds (based on 20 rows = 13 seconds actual)
 FIELD_TYPES = [
     "String", "Number", "Date", "Boolean", "Currency", 
     "UUID", "Email", "Name", "Category", "Status", "Timestamp"
