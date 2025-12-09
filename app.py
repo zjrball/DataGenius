@@ -198,7 +198,7 @@ def preview_dataset(industry, quality, fields_data, dirty_percentage=10):
         
         # Parse and display with error handling
         try:
-            df = pd.read_csv(io.StringIO(csv_text), on_bad_lines='skip')
+            df = pd.read_csv(io.StringIO(csv_text), on_bad_lines='skip', engine='python')
             if len(df) == 0:
                 st.error("Preview failed: No valid rows generated. Please try again.")
                 return
@@ -206,7 +206,7 @@ def preview_dataset(industry, quality, fields_data, dirty_percentage=10):
             st.session_state.analysis_ideas = []
             status_text.empty()
             st.rerun()
-        except pd.errors.ParserError as parse_err:
+        except Exception as parse_err:
             st.error(f"Preview failed: CSV parsing error. {str(parse_err)}")
             return
 
@@ -272,9 +272,16 @@ Output: CSV with headers only, no markdown."""
             progress_bar.progress(90)
             
         # 3. Parse and Store
-        df = pd.read_csv(io.StringIO(csv_text))
-        st.session_state.generated_data = df
-        st.session_state.analysis_ideas = ideas
+        try:
+            df = pd.read_csv(io.StringIO(csv_text), on_bad_lines='skip', engine='python')
+            if len(df) == 0:
+                st.error("Generation failed: No valid rows produced. Try adjusting your field descriptions.")
+                return
+            st.session_state.generated_data = df
+            st.session_state.analysis_ideas = ideas
+        except Exception as parse_err:
+            st.error(f"Generation failed: CSV parsing error - {str(parse_err)}. The AI may have generated inconsistent data.")
+            return
         
         progress_bar.progress(100)
         time.sleep(0.5)
