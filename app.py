@@ -96,11 +96,15 @@ if "analysis_ideas" not in st.session_state:
 
 # --- Logic ---
 
-def calculate_eta(row_count):
+def calculate_eta(row_count, include_analysis=False):
     """Calculate estimated time to generate dataset."""
     base_time = 3  # Base overhead in seconds
     row_time = (row_count / 100) * ESTIMATED_TIME_PER_100_ROWS
     total_seconds = int(base_time + row_time)
+    
+    # Double the time if analysis is included
+    if include_analysis:
+        total_seconds *= 2
     
     if total_seconds < 60:
         return f"{total_seconds}s"
@@ -293,7 +297,7 @@ with st.sidebar:
     include_analysis = st.checkbox("Include Analysis Ideas", value=False, help="Uncheck to speed up generation")
     
     # Display ETA
-    eta = calculate_eta(row_count)
+    eta = calculate_eta(row_count, include_analysis)
     st.caption(f"⏱️ Estimated time: {eta}")
     
     st.divider()
@@ -360,7 +364,18 @@ if generate_btn:
 # Results Section
 if st.session_state.generated_data is not None:
     st.divider()
-    st.subheader("Results")
+    col_header, col_download = st.columns([3, 1])
+    with col_header:
+        st.subheader("Results")
+    with col_download:
+        csv = st.session_state.generated_data.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download CSV",
+            data=csv,
+            file_name=f"{selected_preset.lower()}_data.csv",
+            mime="text/csv",
+            type="primary"
+        )
     
     # Analysis Ideas
     if st.session_state.analysis_ideas:
@@ -371,16 +386,6 @@ if st.session_state.generated_data is not None:
 
     # Data Preview
     st.dataframe(st.session_state.generated_data, use_container_width=True)
-    
-    # Download
-    csv = st.session_state.generated_data.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="Download CSV",
-        data=csv,
-        file_name=f"{selected_preset.lower()}_data.csv",
-        mime="text/csv",
-        type="primary"
-    )
 
 elif not api_key:
     st.warning("Please enter a Gemini API Key in the sidebar to start generating.")
