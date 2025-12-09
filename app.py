@@ -143,7 +143,7 @@ def generate_schema_from_prompt(prompt_text):
         except Exception as e:
             st.error(f"Failed to generate schema: {e}")
 
-def preview_dataset(industry, quality, fields_data):
+def preview_dataset(industry, quality, fields_data, dirty_percentage=10):
     """Generates a quick 10-row preview of the dataset."""
     if not api_key:
         st.error("API Key required")
@@ -164,7 +164,7 @@ def preview_dataset(industry, quality, fields_data):
     quality_prompt = (
         "Strictly clean data. Standard formats. No nulls." 
         if quality == "Clean" 
-        else "Messy data. 10% nulls. Occasional typos. Mixed date formats."
+        else f"Messy data. {dirty_percentage}% nulls/typos. Mixed date formats."
     )
 
     prompt = f"""
@@ -202,7 +202,7 @@ def preview_dataset(industry, quality, fields_data):
     except Exception as e:
         st.error(f"Preview failed: {e}")
 
-def generate_dataset(industry, rows, quality, fields_data, include_analysis=False):
+def generate_dataset(industry, rows, quality, fields_data, include_analysis=False, dirty_percentage=10):
     """Generates the actual CSV data."""
     if not api_key:
         st.error("API Key required")
@@ -223,7 +223,7 @@ def generate_dataset(industry, rows, quality, fields_data, include_analysis=Fals
     quality_prompt = (
         "Clean data. Standard formats. No nulls." 
         if quality == "Clean" 
-        else "Messy data. 10% nulls. Occasional typos. Mixed formats."
+        else f"Messy data. {dirty_percentage}% nulls/typos. Mixed formats."
     )
 
     prompt = f"""Generate {rows} CSV rows for '{industry}'. {quality_prompt}
@@ -294,6 +294,13 @@ with st.sidebar:
     
     row_count = st.slider("Row Count", 10, 100, 50)
     data_quality = st.radio("Data Quality", ["Clean", "Dirty"], index=0)
+    
+    # Dirty data percentage slider
+    if data_quality == "Dirty":
+        dirty_percentage = st.slider("Dirty Data %", 0, 20, 10, help="Percentage of rows with issues")
+    else:
+        dirty_percentage = 0
+    
     include_analysis = st.checkbox("Include Analysis Ideas", value=False, help="Uncheck to speed up generation")
     
     # Display ETA
@@ -352,14 +359,14 @@ if preview_btn:
     if len(edited_df) > MAX_FIELDS:
         st.error(f"❌ Cannot generate: {len(edited_df)} fields exceed the {MAX_FIELDS} field limit.")
     else:
-        preview_dataset(selected_preset, data_quality, edited_df)
+        preview_dataset(selected_preset, data_quality, edited_df, dirty_percentage)
 
 # Handle Generation Trigger
 if generate_btn:
     if len(edited_df) > MAX_FIELDS:
         st.error(f"❌ Cannot generate: {len(edited_df)} fields exceed the {MAX_FIELDS} field limit.")
     else:
-        generate_dataset(selected_preset, row_count, data_quality, edited_df, include_analysis)
+        generate_dataset(selected_preset, row_count, data_quality, edited_df, include_analysis, dirty_percentage)
 
 # Results Section
 if st.session_state.generated_data is not None:
