@@ -198,7 +198,7 @@ def preview_dataset(industry, quality, fields_data):
     except Exception as e:
         st.error(f"Preview failed: {e}")
 
-def generate_dataset(industry, rows, quality, fields_data):
+def generate_dataset(industry, rows, quality, fields_data, include_analysis=False):
     """Generates the actual CSV data."""
     if not api_key:
         st.error("API Key required")
@@ -217,26 +217,16 @@ def generate_dataset(industry, rows, quality, fields_data):
         field_desc.append(f"{row['Field Name']} ({row['Type']}): {row['Context']}")
     
     quality_prompt = (
-        "Strictly clean data. Standard formats. No nulls." 
+        "Clean data. Standard formats. No nulls." 
         if quality == "Clean" 
-        else "Messy data. 10% nulls. Occasional typos. Mixed date formats."
+        else "Messy data. 10% nulls. Occasional typos. Mixed formats."
     )
 
-    prompt = f"""
-    Generate a CSV dataset for '{industry}'.
-    Rows: {rows}
-    Quality Rules: {quality_prompt}
-    
-    Columns:
-    {"; ".join(field_desc)}
-    
-    Output ONLY raw CSV content. Include headers.
-    """
+    prompt = f"""Generate {rows} CSV rows for '{industry}'. {quality_prompt}
+Columns: {"; ".join(field_desc)}
+Output: CSV with headers only, no markdown."""
 
-    analysis_prompt = f"""
-    Suggest 3 business questions for a {industry} dataset with columns: {", ".join(fields_data['Field Name'].tolist())}.
-    Return JSON string array.
-    """
+    analysis_prompt = f"""Suggest 3 business questions for {industry} data with columns: {", ".join(fields_data['Field Name'].tolist())}. Return JSON array."""
 
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -249,19 +239,23 @@ def generate_dataset(industry, rows, quality, fields_data):
         response = model.generate_content(prompt)
         csv_text = response.text.replace("```csv", "").replace("```", "").strip()
         
-        progress_bar.progress(70)
+        progress_bar.progress(50)
         
-        # 2. Generate Analysis
-        status_text.text("Analyzing potential insights...")
-        analysis_res = model.generate_content(analysis_prompt)
-        
-        try:
-            ideas = json.loads(analysis_res.text.replace("```json", "").replace("```", ""))
-        except:
-            ideas = ["Analyze trends", "Check distributions", "Find outliers"]
+        # 2. Optionally Generate Analysis
+        ideas = []
+        if include_analysis:
+            status_text.text("Analyzing potential insights...")
+            analysis_res = model.generate_content(analysis_prompt)
             
-        progress_bar.progress(90)
-        
+            try:
+                ideas = json.loads(analysis_res.text.replace("```json", "").replace("```", ""))
+            except:
+                ideas = ["Analyze trends", "Check distributions", "Find outliers"]
+            
+            progress_bar.progress(90)
+        else:
+            progress_bar.progress(90)
+            
         # 3. Parse and Store
         df = pd.read_csv(io.StringIO(csv_text))
         st.session_state.generated_data = df
@@ -296,6 +290,7 @@ with st.sidebar:
     
     row_count = st.slider("Row Count", 10, 100, 50)
     data_quality = st.radio("Data Quality", ["Clean", "Dirty"], index=0)
+    include_analysis = st.checkbox("Include Analysis Ideas", value=False, help="Uncheck to speed up generation")
     
     # Display ETA
     eta = calculate_eta(row_count)
@@ -360,7 +355,7 @@ if generate_btn:
     if len(edited_df) > MAX_FIELDS:
         st.error(f"❌ Cannot generate: {len(edited_df)} fields exceed the {MAX_FIELDS} field limit.")
     else:
-        generate_dataset(selected_preset, row_count, data_quality, edited_df)
+        generate_dataset(selected_preset, row_count, data_quality, edited_df, include_analysis)
 
 # Results Section
 if st.session_state.generated_data is not None:
