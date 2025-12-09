@@ -208,7 +208,7 @@ with st.sidebar:
     
     st.divider()
     
-    row_count = st.slider("Row Count", 10, 500, 50)
+    row_count = st.slider("Row Count", 10, 100, 50)
     data_quality = st.radio("Data Quality", ["Clean", "Dirty"], index=0)
     
     st.divider()
