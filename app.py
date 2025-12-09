@@ -317,7 +317,7 @@ with st.sidebar:
     
     # Dirty data percentage slider
     if data_quality == "Dirty":
-        dirty_percentage = st.slider("Dirty Data %", 0, 20, 10, help="Percentage of rows with issues")
+        dirty_percentage = st.slider("Dirty Data %", 0, 80, 10, help="Percentage of rows with issues")
     else:
         dirty_percentage = 0
     
