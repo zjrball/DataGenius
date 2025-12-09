@@ -1,0 +1,12 @@
+# 1. Hide the Streamlit secrets 
+.streamlit/secrets.toml
+
+# 2. Hide environment variables 
+.env
+
+# 3. Hide the virtual environment 
+.venv/
+venv/
+
+# 4. Hide Python cache
+__pycache__/
