@@ -47,7 +47,7 @@ Whether you need a pristine dataset for a client demo or a broken, messy dataset
 ---
 
 ## 🚀 How to Run Locally
-For a compact step-by-step guide, see `RUN_LOCAL.md`.
+For a compact step-by-step guide, see [RUN_LOCAL.md](https://github.com/zjrball/DataGenius/blob/main/RUN_LOCAL.md).
 
 You can run this tool locally and ask other users to clone the repo and
 run it with their own API keys. The app intentionally prefers a local
