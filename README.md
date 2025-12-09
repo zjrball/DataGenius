@@ -1,6 +1,6 @@
 # ⚡ DataGenius: Synthetic Data Generator
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://YOUR-APP-URL-HERE.streamlit.app/)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://datageniuses.streamlit.app/)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![Gemini API](https://img.shields.io/badge/AI-Google%20Gemini-orange)
 
