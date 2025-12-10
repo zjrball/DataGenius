@@ -6,7 +6,7 @@ Co-Authored By: Google Gemini, Claude AI, and Copilot(AI Assistants)
 Description:
 This application was developed with AI assistance to demonstrate modern 
 rapid-prototyping workflows. While the code logic was augmented by AI, 
-all outputs have been manually reviewed and tested for accuracy and security.
+all outputs have been manually reviewed and tested for accuracy.
 """
 
 import streamlit as st
@@ -84,7 +84,7 @@ def validate_schema(schema):
 
     Returns (True, None) if valid, or (False, message) if invalid.
     Expected schema: list[dict] with keys 'Field Name','Type','Context'.
-    'Type' must be one of FIELD_TYPES.
+    'Type' must be one of FIELD_TYPES. 'Messiness' is optional.
     """
     if not isinstance(schema, list):
         return False, "Schema must be a JSON array of field objects."
@@ -100,6 +100,12 @@ def validate_schema(schema):
             return False, f"Invalid Field Name at index {idx}."
         if item["Type"] not in FIELD_TYPES:
             return False, f"Invalid Type '{item['Type']}' at index {idx}. Allowed: {', '.join(FIELD_TYPES)}"
+        # Add Messiness key if missing (default to Clean)
+        if "Messiness" not in item:
+            item["Messiness"] = "Clean"
+        # Add Messiness % if missing (default to 0)
+        if "Messiness %" not in item:
+            item["Messiness %"] = 0
     return True, None
 
 # --- Limits ---
@@ -118,28 +124,58 @@ FIELD_TYPES = [
     "UUID", "Email", "Name", "Category", "Status", "Timestamp"
 ]
 
+# Messiness options by field type - users can choose specific quality issues per field
+MESSINESS_OPTIONS = {
+    "Date": ["Clean", "NaN", "Blank", "Different Formats", "Duplicates", "Future Dates"],
+    "Timestamp": ["Clean", "NaN", "Blank", "Different Formats", "Duplicates", "Timezone Issues"],
+    "String": ["Clean", "NaN", "Blank", "Typos", "Mixed Case", "Extra Whitespace", "Special Characters"],
+    "Number": ["Clean", "NaN", "Blank", "Outliers", "Negative Values", "Decimals as Text"],
+    "Currency": ["Clean", "NaN", "Blank", "Missing Symbols", "Wrong Decimals", "Negative Values"],
+    "Boolean": ["Clean", "NaN", "Blank", "Text Values (Yes/No)", "0/1 Instead"],
+    "Email": ["Clean", "NaN", "Blank", "Invalid Format", "Missing @", "Typos"],
+    "Name": ["Clean", "NaN", "Blank", "Typos", "All Caps", "Numbers in Name"],
+    "Category": ["Clean", "NaN", "Blank", "Typos", "Inconsistent Labels", "Extra Values"],
+    "Status": ["Clean", "NaN", "Blank", "Typos", "Inconsistent Labels"],
+    "UUID": ["Clean", "NaN", "Blank", "Invalid Format", "Duplicates"],
+}
+
+# Pre-generated AI suggestion prompts for quick access
+AI_SUGGESTIONS = [
+    "Restaurant order history with menu items, prices, and timestamps",
+    "Employee performance reviews with ratings, feedback, and salary changes",
+    "Social media posts with engagement metrics, hashtags, and timestamps",
+    "Inventory management with stock levels, reorder points, and suppliers",
+    "Customer support tickets with priority, status, and resolution time",
+    "Real estate listings with property details, prices, and locations",
+    "Fitness tracker data with workouts, calories, and heart rate",
+    "Online course enrollments with students, grades, and completion status",
+    "Vehicle fleet maintenance with service records, costs, and mileage",
+    "Project task management with assignments, deadlines, and progress"
+]
+
 PRESETS = {
     "E-commerce": [
-        {"Field Name": "Transaction ID", "Type": "UUID", "Context": "Unique identifier"},
-        {"Field Name": "Customer", "Type": "Name", "Context": ""},
-        {"Field Name": "Product", "Type": "Category", "Context": "Electronics, Home, Fashion"},
-        {"Field Name": "Amount", "Type": "Currency", "Context": "Min: 10, Max: 500"},
-        {"Field Name": "Date", "Type": "Date", "Context": "2024"},
+        {"Field Name": "Transaction ID", "Type": "UUID", "Context": "Unique identifier", "Messiness": "Clean", "Messiness %": 0},
+        {"Field Name": "Customer", "Type": "Name", "Context": "First and last name", "Messiness": "Clean", "Messiness %": 0},
+        {"Field Name": "Product", "Type": "Category", "Context": "Electronics, Home, Fashion", "Messiness": "Clean", "Messiness %": 0},
+        {"Field Name": "Amount", "Type": "Currency", "Context": "Min: 10, Max: 500", "Messiness": "Clean", "Messiness %": 0},
+        {"Field Name": "Order Date", "Type": "Date", "Context": "2020-2024, realistic distribution", "Messiness": "Clean", "Messiness %": 0},
     ],
     "Healthcare": [
-        {"Field Name": "Patient ID", "Type": "UUID", "Context": ""},
-        {"Field Name": "Diagnosis", "Type": "String", "Context": "ICD-10 codes"},
-        {"Field Name": "Admission", "Type": "Date", "Context": "Last 6 months"},
-        {"Field Name": "Bill", "Type": "Currency", "Context": "Min: 500, Max: 50000"},
+        {"Field Name": "Patient ID", "Type": "UUID", "Context": "Unique identifier", "Messiness": "Clean", "Messiness %": 0},
+        {"Field Name": "Diagnosis", "Type": "String", "Context": "ICD-10 codes", "Messiness": "Clean", "Messiness %": 0},
+        {"Field Name": "Admission Date", "Type": "Date", "Context": "Last 12 months", "Messiness": "Clean", "Messiness %": 0},
+        {"Field Name": "Bill", "Type": "Currency", "Context": "Min: 500, Max: 50000", "Messiness": "Clean", "Messiness %": 0},
     ],
     "Finance": [
-        {"Field Name": "Account", "Type": "UUID", "Context": ""},
-        {"Field Name": "Type", "Type": "Category", "Context": "Debit, Credit, Transfer"},
-        {"Field Name": "Amount", "Type": "Currency", "Context": "Min: 50, Max: 5000"},
-        {"Field Name": "Fraud Flag", "Type": "Boolean", "Context": "1% True"},
+        {"Field Name": "Account", "Type": "UUID", "Context": "Unique identifier", "Messiness": "Clean", "Messiness %": 0},
+        {"Field Name": "Transaction Type", "Type": "Category", "Context": "Debit, Credit, Transfer", "Messiness": "Clean", "Messiness %": 0},
+        {"Field Name": "Amount", "Type": "Currency", "Context": "Min: 50, Max: 5000", "Messiness": "Clean", "Messiness %": 0},
+        {"Field Name": "Transaction Date", "Type": "Timestamp", "Context": "Last 3 years", "Messiness": "Clean", "Messiness %": 0},
+        {"Field Name": "Fraud Flag", "Type": "Boolean", "Context": "1% True", "Messiness": "Clean", "Messiness %": 0},
     ],
     "Custom": [
-        {"Field Name": "ID", "Type": "UUID", "Context": ""},
+        {"Field Name": "ID", "Type": "UUID", "Context": "", "Messiness": "Clean", "Messiness %": 0},
     ]
 }
 
@@ -151,6 +187,9 @@ if "fields_df" not in st.session_state:
 
 if "generated_data" not in st.session_state:
     st.session_state.generated_data = None
+
+if "ai_prompt_text" not in st.session_state:
+    st.session_state.ai_prompt_text = ""
 
 # --- Logic ---
 
@@ -213,19 +252,20 @@ def _sanitize_dataframe_for_csv(df: pd.DataFrame) -> pd.DataFrame:
 
     return df_safe
 
-def generate_schema_from_prompt(prompt_text):
+def generate_schema_from_prompt(prompt_text, num_fields=5):
     """Ask the model to propose a small schema from a short description.
 
     Notes:
     - The model may return code fences or additional commentary; we strip
       common markdown wrappers before attempting to parse JSON.
-    - We intentionally cap AI suggestions to 10 fields here (even though
-      `MAX_FIELDS` is larger). This is to keep AI suggestions concise and
-      useful; the user can always edit/expand the schema manually up to
-      `MAX_FIELDS`.
+    - The num_fields parameter allows users to specify how many fields to generate.
     """
     if not api_key:
         st.error("API Key required")
+        return
+    
+    if not prompt_text or prompt_text.strip() == "":
+        st.error("Please describe your dataset before using Auto-Fill")
         return
 
     with st.spinner("Dreaming up schema..."):
@@ -235,10 +275,15 @@ def generate_schema_from_prompt(prompt_text):
         # instruct it to return only a JSON array so parsing is more reliable.
         sys_prompt = f"""
         You are a data architect. Generate a list of fields for a dataset described as: "{prompt_text}".
-        IMPORTANT: Generate maximum 10 fields only (not {MAX_FIELDS}).
+        IMPORTANT: Generate exactly {num_fields} fields (not more, not less).
         Return ONLY valid JSON array of objects with keys: "Field Name", "Type", "Context".
         Allowed Types: {", ".join(FIELD_TYPES)}.
-        Context should include min/max for numbers or category options.
+        
+        Context should include:
+        - For Date/Timestamp fields: Specify realistic ranges (e.g., "Last 5 years", "2020-2024", "Last 6 months")
+        - For Number/Currency: Specify min/max that make sense for the domain (e.g., coffee prices $2-8, not $1-1000)
+        - For Category: List specific realistic options (e.g., "Latte, Cappuccino, Espresso" not just "Coffee types")
+        - For related fields: Ensure they can correlate logically (e.g., order dates should be older than delivery dates)
         """
         try:
             # Request content from the model. Capture the raw text so we can
@@ -271,11 +316,10 @@ def generate_schema_from_prompt(prompt_text):
                 st.code(sample)
                 return
 
-            # Safety: trim overly large AI suggestions to 10 items. We show a
-            # warning so users understand a truncation happened.
-            if len(schema) > 10:
-                st.warning(f"⚠️ AI suggested {len(schema)} fields. Trimming to 10 fields for AI autofill.")
-                schema = schema[:10]
+            # Safety: trim overly large AI suggestions to requested num_fields.
+            if len(schema) > num_fields:
+                st.warning(f"⚠️ AI suggested {len(schema)} fields. Trimming to {num_fields} fields as requested.")
+                schema = schema[:num_fields]
 
             # Validate trimmed schema as well (in case trimming removed valid
             # fields but left invalid items).
@@ -297,7 +341,7 @@ def generate_schema_from_prompt(prompt_text):
             st.error("Failed to generate schema: model request failed.")
 
 
-def preview_dataset(industry, quality, fields_data, dirty_percentage=10):
+def preview_dataset(industry, fields_data):
     """Generate a fast, small preview to validate schema & prompts.
 
     Important implementation notes:
@@ -319,50 +363,53 @@ def preview_dataset(industry, quality, fields_data, dirty_percentage=10):
 
     model = get_model()
     
-    # Build a compact textual description of each field for the prompt.
-    # Example: "Age (Number): Min: 18, Max: 99"
-    # Keeping this human-friendly reduces ambiguity in the generated CSV.
-    # If `fields_data` is a DataFrame with unexpected columns, the list
-    # comprehension will raise; callers should ensure a valid schema format.
-    #
-    # Note: `fields_data.iterrows()` yields a snapshot of the DataFrame rows.
-    # If the user edits the DataFrame in the UI after this snapshot, those
-    # edits won't affect the current generation call.
-    #
-    # Construct schema description
+    # Build field descriptions with messiness instructions
     field_desc = []
+    messiness_instructions = []
     for _, row in fields_data.iterrows():
         field_desc.append(f"{row['Field Name']} ({row['Type']}): {row['Context']}")
+        messiness = row.get('Messiness', 'Clean')
+        if messiness != "Clean":
+            messiness_pct = row.get('Messiness %', 15)
+            messiness_instructions.append(f"  - {row['Field Name']}: Apply '{messiness}' ({messiness_pct}% of rows)")
     
-    quality_prompt = (
-        "Strictly clean data. Standard formats. No nulls." 
-        if quality == "Clean" 
-        else f"Messy data. {dirty_percentage}% nulls/typos. Mixed date formats."
-    )
+    quality_section = ""
+    if messiness_instructions:
+        quality_section = "\n\nQUALITY ISSUES TO INJECT:\n" + "\n".join(messiness_instructions)
+    else:
+        quality_section = "\n\nAll fields should be Clean with standard formats and no nulls."
 
-    # The prompt explicitly demands CSV-only output (no markdown/code fences)
-    # and the exact number of columns. Explicit instructions reduce the rate of
-    # malformed output but do not eliminate it, hence the forgiving parsing
-    # above.
     prompt = f"""
     Generate a CSV dataset for '{industry}'.
     Rows: 10
-    Quality Rules: {quality_prompt}
 
     Columns (exactly {len(field_desc)} fields):
-    {"; ".join(field_desc)}
+    {'; '.join(field_desc)}
+    {quality_section}
 
+    IMPORTANT DATA REALISM RULES:
+    - Dates/Timestamps: Keep within specified ranges. If range not specified, use last 2-5 years.
+    - Related fields must be logically consistent (e.g., order date < delivery date, hire date < termination date).
+    - Categorical values should reflect real-world distributions (e.g., popular items appear more often).
+    - Numeric ranges should respect Context constraints and industry norms.
+    - Apply messiness types ONLY to specified fields at their exact specified percentage.
+    
     CRITICAL: Output ONLY valid CSV with exactly {len(field_desc)} columns per row. Include headers. No markdown formatting.
     """
 
+    progress_bar = st.progress(0)
     status_text = st.empty()
 
     try:
         # Request preview from the model and aggressively strip common
         # markdown wrappers. We still protect parsing with pandas.
-        status_text.text("Generating preview...")
+        status_text.text("🤖 Generating 10-row preview...")
+        progress_bar.progress(20)
         response = model.generate_content(prompt)
         csv_text = response.text.replace("```csv", "").replace("```", "").strip()
+
+        status_text.text("📊 Parsing CSV data...")
+        progress_bar.progress(60)
 
         # Parse and display with error handling
         try:
@@ -374,24 +421,36 @@ def preview_dataset(industry, quality, fields_data, dirty_percentage=10):
                 st.error("Preview failed: No valid rows generated. Please try again.")
                 return
 
+            status_text.text("🔒 Sanitizing data...")
+            progress_bar.progress(80)
+
             # Sanitize the resulting DataFrame to mitigate CSV injection
             # before storing and presenting it to the user or offering a
             # download.
             df_safe = _sanitize_dataframe_for_csv(df)
             st.session_state.generated_data = df_safe
+            
+            # Complete UI update
+            progress_bar.progress(100)
+            time.sleep(0.3)
+            progress_bar.empty()
             status_text.empty()
             # Force UI refresh so the Results panel appears with the preview.
             st.rerun()
         except Exception as parse_err:
+            progress_bar.empty()
+            status_text.empty()
             st.exception(parse_err)
             st.error("Preview failed: CSV parsing error. The AI output may be malformed — try refining your schema.")
             return
 
     except Exception as e:
+        progress_bar.empty()
+        status_text.empty()
         st.exception(e)
         st.error("Preview failed: model request failed. Check API key and network.")
 
-def generate_dataset(industry, rows, quality, fields_data, dirty_percentage=10):
+def generate_dataset(industry, rows, fields_data):
     """Generate the full dataset according to the user's schema.
 
     The implementation mirrors `preview_dataset` but generates `rows` rows.
@@ -411,21 +470,36 @@ def generate_dataset(industry, rows, quality, fields_data, dirty_percentage=10):
 
     model = get_model()
     
-    # Construct schema description
-    # Build the descriptive field list to place in the AI prompt. Keep it
-    # brief but informative (min/max, categories, uniqueness hints).
+    # Build field descriptions with messiness instructions
     field_desc = []
+    messiness_instructions = []
     for _, row in fields_data.iterrows():
         field_desc.append(f"{row['Field Name']} ({row['Type']}): {row['Context']}")
+        messiness = row.get('Messiness', 'Clean')
+        if messiness != "Clean":
+            messiness_pct = row.get('Messiness %', 15)
+            messiness_instructions.append(f"  - {row['Field Name']}: Apply '{messiness}' ({messiness_pct}% of rows)")
     
-    quality_prompt = (
-        "Clean data. Standard formats. No nulls." 
-        if quality == "Clean" 
-        else f"Messy data. {dirty_percentage}% nulls/typos. Mixed formats."
-    )
+    quality_section = ""
+    if messiness_instructions:
+        quality_section = "\n\nQUALITY ISSUES TO INJECT:\n" + "\n".join(messiness_instructions)
+    else:
+        quality_section = "\n\nAll fields should be Clean with standard formats and no nulls."
 
-    prompt = f"""Generate {rows} CSV rows for '{industry}'. {quality_prompt}
-Columns: {"; ".join(field_desc)}
+    prompt = f"""Generate EXACTLY {rows} CSV rows for '{industry}' (not more, not less).
+
+Columns: {'; '.join(field_desc)}
+{quality_section}
+
+IMPORTANT DATA REALISM:
+- Dates/Timestamps: Stay within specified ranges. If unspecified, use last 2-5 years.
+- Related fields must be logically consistent (order date < ship date, start < end, etc.).
+- Categories should follow realistic distributions (common items more frequent).
+- Numbers must respect Context min/max and industry standards.
+- For time-series data, ensure natural temporal patterns (weekday peaks for B2B, weekend for retail, etc.).
+- Apply messiness types ONLY to specified fields at their exact specified percentage.
+
+CRITICAL: Generate EXACTLY {rows} data rows (excluding header). Do not generate more or fewer rows.
 Output: CSV with headers only, no markdown."""
 
     # UI affordances: progress and status improve perceived performance.
@@ -434,13 +508,14 @@ Output: CSV with headers only, no markdown."""
 
     try:
         # 1. Generate Data: request CSV text from the model.
-        status_text.text("Generating synthetic data...")
-        progress_bar.progress(30)
+        status_text.text(f"🤖 Generating {rows} rows with {len(field_desc)} fields...")
+        progress_bar.progress(20)
         # Local generation request
         response = model.generate_content(prompt)
         csv_text = response.text.replace("```csv", "").replace("```", "").strip()
 
-        progress_bar.progress(50)
+        status_text.text("📊 Parsing CSV data...")
+        progress_bar.progress(60)
 
         # 2. Parse and Store: robust parsing as in preview (skip bad lines).
         try:
@@ -448,6 +523,16 @@ Output: CSV with headers only, no markdown."""
             if len(df) == 0:
                 st.error("Generation failed: No valid rows produced. Try adjusting your field descriptions.")
                 return
+
+            # Enforce exact row count by truncating or warning
+            if len(df) > rows:
+                st.warning(f"⚠️ AI generated {len(df)} rows instead of {rows}. Truncating to requested count.")
+                df = df.head(rows)
+            elif len(df) < rows:
+                st.warning(f"⚠️ AI generated only {len(df)} rows instead of {rows}.")
+
+            status_text.text("🔒 Sanitizing data...")
+            progress_bar.progress(80)
 
             # Sanitize before storing/downloading to mitigate CSV injection.
             df_safe = _sanitize_dataframe_for_csv(df)
@@ -489,13 +574,6 @@ with st.sidebar:
     st.divider()
     
     row_count = st.slider("Row Count", 10, 100, 50)
-    data_quality = st.radio("Data Quality", ["Clean", "Dirty"], index=0)
-    
-    # Dirty data percentage slider
-    if data_quality == "Dirty":
-        dirty_percentage = st.slider("Dirty Data %", 0, 80, 10, help="Percentage of rows with issues")
-    else:
-        dirty_percentage = 0
     
     # Display ETA
     eta = calculate_eta(row_count, len(st.session_state.fields_df))
@@ -512,19 +590,68 @@ st.header("Schema Configuration")
 
 # AI Auto-Fill Section
 with st.expander("✨ AI Auto-Fill Schema"):
-    col_ai_1, col_ai_2 = st.columns([4, 1])
+    # Quick suggestions at the top
+    st.caption("💡 Quick Ideas:")
+    col_sug1, col_sug2 = st.columns(2)
+    suggestion_1 = AI_SUGGESTIONS[0]
+    suggestion_2 = AI_SUGGESTIONS[1]
+    with col_sug1:
+        if st.button(f"📋 {suggestion_1[:40]}...", key="sug1", use_container_width=True):
+            st.session_state.ai_prompt_text = suggestion_1
+            st.rerun()
+    with col_sug2:
+        if st.button(f"📋 {suggestion_2[:40]}...", key="sug2", use_container_width=True):
+            st.session_state.ai_prompt_text = suggestion_2
+            st.rerun()
+    
+    col_ai_1, col_ai_2, col_ai_3 = st.columns([4, 1, 1])
     with col_ai_1:
-        ai_prompt = st.text_input("Describe your dataset", placeholder="e.g. 'Startup employee roster with equity and vesting schedules'")
+        ai_prompt = st.text_input("Describe your dataset", value=st.session_state.ai_prompt_text, placeholder="e.g. 'Startup employee roster with equity and vesting schedules'")
     with col_ai_2:
+        num_fields = st.number_input("# Fields", min_value=1, max_value=MAX_FIELDS, value=5, step=1, help="Number of fields to generate")
+    with col_ai_3:
         st.write("") # Spacer
         st.write("") 
         if st.button("Auto-Fill"):
-            generate_schema_from_prompt(ai_prompt)
+            generate_schema_from_prompt(ai_prompt, num_fields)
 
 # Field Editor with limit indicator
 field_count = len(st.session_state.fields_df)
 field_limit_color = "🟢" if field_count <= MAX_FIELDS else "🔴"
 st.caption(f"{field_limit_color} Fields: {field_count}/{MAX_FIELDS}")
+
+# Show messiness options guide
+with st.expander("ℹ️ Messiness Options by Field Type"):
+    st.markdown("""
+    **Date/Timestamp**: NaN, Blank, Different Formats, Duplicates, Future Dates, Timezone Issues
+    
+    **String**: NaN, Blank, Typos, Mixed Case, Extra Whitespace, Special Characters
+    
+    **Number/Currency**: NaN, Blank, Outliers, Negative Values, Decimals as Text, Missing Symbols, Wrong Decimals
+    
+    **Boolean**: NaN, Blank, Text Values (Yes/No), 0/1 Instead
+    
+    **Email**: NaN, Blank, Invalid Format, Missing @, Typos
+    
+    **Name**: NaN, Blank, Typos, All Caps, Numbers in Name
+    
+    **Category/Status**: NaN, Blank, Typos, Inconsistent Labels, Extra Values
+    
+    **UUID**: NaN, Blank, Invalid Format, Duplicates
+    """)
+
+# Ensure Messiness column exists in session state
+if 'Messiness' not in st.session_state.fields_df.columns:
+    st.session_state.fields_df['Messiness'] = 'Clean'
+if 'Messiness %' not in st.session_state.fields_df.columns:
+    st.session_state.fields_df['Messiness %'] = 0
+
+# Collect all unique messiness options across all field types
+all_messiness_options = ["Clean"]
+for options in MESSINESS_OPTIONS.values():
+    for opt in options:
+        if opt not in all_messiness_options:
+            all_messiness_options.append(opt)
 
 edited_df = st.data_editor(
     st.session_state.fields_df,
@@ -538,15 +665,53 @@ edited_df = st.data_editor(
         ),
         "Context": st.column_config.TextColumn(
             "Context / Description",
-            help="e.g. 'Min: 10, Max: 100' or 'Must be unique'"
+            help="e.g. 'Min: 10, Max: 100' or 'Last 5 years'"
+        ),
+        "Messiness": st.column_config.SelectboxColumn(
+            "Messiness",
+            options=all_messiness_options,
+            help="Choose quality issue for this field (options vary by Type)",
+            required=False,
+        ),
+        "Messiness %": st.column_config.NumberColumn(
+            "Messiness %",
+            help="Percentage of rows with this quality issue (0-100)",
+            min_value=0,
+            max_value=100,
+            step=5,
+            format="%d%%",
         )
     }
 )
 
+# Post-process to ensure Messiness column has appropriate options per Type
+# and auto-number new rows with blank Field Names
+for idx, row in edited_df.iterrows():
+    field_type = row.get('Type', 'String')
+    current_messiness = row.get('Messiness', 'Clean')
+    field_name = row.get('Field Name', '')
+    
+    # Auto-number blank Field Names
+    if field_name == '' or pd.isna(field_name):
+        edited_df.at[idx, 'Field Name'] = f"Field {idx + 1}"
+    
+    valid_options = MESSINESS_OPTIONS.get(field_type, ["Clean"])
+    # If current messiness is not valid for this type, reset to Clean and percentage to 0
+    if current_messiness not in valid_options:
+        edited_df.at[idx, 'Messiness'] = 'Clean'
+        edited_df.at[idx, 'Messiness %'] = 0
+
+# Enforce field limit by truncating excess rows
+if len(edited_df) > MAX_FIELDS:
+    st.warning(f"⚠️ Field limit exceeded! Only the first {MAX_FIELDS} fields will be kept.")
+    edited_df = edited_df.head(MAX_FIELDS)
+
 # Update session state when rows are edited or deleted
 st.session_state.fields_df = edited_df
 
-if field_count >= MAX_FIELDS:
+# Update field count after processing
+updated_field_count = len(edited_df)
+if updated_field_count >= MAX_FIELDS:
     st.info(f"ℹ️ Field limit ({MAX_FIELDS}) reached. Remove fields to add more.")
 
 # Handle Preview Trigger
@@ -554,14 +719,14 @@ if preview_btn:
     if len(edited_df) > MAX_FIELDS:
         st.error(f"❌ Cannot generate: {len(edited_df)} fields exceed the {MAX_FIELDS} field limit.")
     else:
-        preview_dataset(selected_preset, data_quality, edited_df, dirty_percentage)
+        preview_dataset(selected_preset, edited_df)
 
 # Handle Generation Trigger
 if generate_btn:
     if len(edited_df) > MAX_FIELDS:
         st.error(f"❌ Cannot generate: {len(edited_df)} fields exceed the {MAX_FIELDS} field limit.")
     else:
-        generate_dataset(selected_preset, row_count, data_quality, edited_df, dirty_percentage)
+        generate_dataset(selected_preset, row_count, edited_df)
 
 # Results Section
 if st.session_state.generated_data is not None:
