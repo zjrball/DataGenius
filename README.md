@@ -12,13 +12,13 @@ Markdown
 
 ---
 
-## ⚡ Quick Start Guide
+## Quick Start Guide
 
 Watch the **[YouTube Tutorial](LINK_HERE)** for a step-by-step walkthrough.
 
 ---
 
-## 🤖 AI Implementation Note
+## AI Implementation Note
 
 This project was built using an **AI-First Workflow**.
 
@@ -28,7 +28,7 @@ This project was built using an **AI-First Workflow**.
 
 ---
 
-## 📖 About The Project
+## About The Project
 
 Data Analysts and Engineers often face a dilemma: **Real data is sensitive, but public datasets are too simple.**
 
@@ -42,17 +42,17 @@ Whether you need a pristine dataset for a client demo or a broken, messy dataset
 ---
 
 ### Key Features
-* **🛡️ Privacy-Safe Simulation:** Generate realistic "dummy" data (names, medical diagnoses, financial transactions) that looks authentic but contains zero real user info. Perfect for public portfolios.
-* **🎚️ Choose Your Difficulty:**
+* **Privacy-Safe Simulation:** Generate realistic "dummy" data (names, medical diagnoses, financial transactions) that looks authentic but contains zero real user info. Perfect for public portfolios.
+* **Choose Your Difficulty:**
     * **Clean Mode:** Generates standardized, formatted data for easy analysis.
     * **Dirty Mode:** Injects realistic chaos (10-20% nulls, typos, outliers) to challenge your data cleaning skills.
-* **🤖 AI Auto-Schema:** Type a prompt like *"Startup employee roster with equity vesting"* and watch the AI build the column structure for you.
-* **🏭 Industry Presets:** One-click templates for Finance, Healthcare, E-Commerce, and more.
-* **📥 CSV Export:** Download raw CSV files ready for SQL import, Python/R analysis, or Excel.
+* **AI Auto-Schema:** Type a prompt like *"Startup employee roster with equity vesting"* and watch the AI build the column structure for you.
+* **Industry Presets:** One-click templates for Finance, Healthcare, E-Commerce, and more.
+* **CSV Export:** Download raw CSV files ready for SQL import, Python/R analysis, or Excel.
 
 ---
 
-## 🚀 How to Run Locally
+## How to Run Locally
 For a compact step-by-step guide, see [RUN_LOCAL.md](https://github.com/zjrball/DataGenius/blob/main/RUN_LOCAL.md).
 
 You can run this tool locally and ask other users to clone the repo and
@@ -123,7 +123,7 @@ Notes
     `st.secrets`-provided API key.
 ---
 
-### 🛠️ Tech Stack
+### Tech Stack
 Frontend: Streamlit (Python-based UI)
 
 AI Engine: Google Gemini 2.5 Flash (via google-generativeai)
@@ -149,7 +149,7 @@ DataGenius/
 ```
 --- 
 
-### 🧠 Prompt Engineering
+### Prompt Engineering
 A key part of this project was designing the prompts to ensure the AI generates structured CSV data rather than conversational text.
 
 Challenge: LLMs love to chat.
@@ -160,7 +160,7 @@ Privacy by Design: The prompts explicitly instruct the model to generate fiction
 
 ---
 
-### 🤝 Contributing
+### Contributing
 Contributions are welcome! If you have ideas for new "Messy Data" types (e.g., specific SQL injection errors or encoding issues), feel free to fork the repo and submit a Pull Request.
 
 Fork the Project
@@ -175,14 +175,14 @@ Open a Pull Request
 
 ---
 
-### 💎 Acknowledgments
+### Acknowledgments
 Google Gemini: This project was co-coded with the assistance of Google Gemini. It acted as a "Pair Programmer," helping to generate the initial Streamlit architecture, debug Python errors, and refine the data generation prompts.
 
 Streamlit Community: For providing the framework that makes deploying Python data tools effortless.
 
 ---
 
-### 📄 License
+### License
 Distributed under the MIT License. See LICENSE for more information.
 
 ---
