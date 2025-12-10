@@ -178,7 +178,7 @@ Open a Pull Request
 ### Acknowledgments
 Google Gemini: This project was co-coded with the assistance of Google Gemini. It acted as a "Pair Programmer," helping to generate the initial Streamlit architecture, debug Python errors, and refine the data generation prompts.
 
-Streamlit Community: For providing the framework that makes deploying Python data tools effortless.
+Streamlit Community: For providing the framework that makes deploying Python data tools.
 
 ---
 
