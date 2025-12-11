@@ -100,9 +100,9 @@ def validate_schema(schema):
             return False, f"Invalid Field Name at index {idx}."
         if item["Type"] not in FIELD_TYPES:
             return False, f"Invalid Type '{item['Type']}' at index {idx}. Allowed: {', '.join(FIELD_TYPES)}"
-        # Add Messiness key if missing (default to Clean)
+        # Add Messiness key if missing (default to None for no messiness)
         if "Messiness" not in item:
-            item["Messiness"] = "Clean"
+            item["Messiness"] = None
         # Add Messiness % if missing (default to 0)
         if "Messiness %" not in item:
             item["Messiness %"] = 0
@@ -126,17 +126,17 @@ FIELD_TYPES = [
 
 # Messiness options by field type - users can choose specific quality issues per field
 MESSINESS_OPTIONS = {
-    "Date": ["Clean", "NaN", "Blank", "Different Formats", "Duplicates", "Future Dates"],
-    "Timestamp": ["Clean", "NaN", "Blank", "Different Formats", "Duplicates", "Timezone Issues"],
-    "String": ["Clean", "NaN", "Blank", "Typos", "Mixed Case", "Extra Whitespace", "Special Characters"],
-    "Number": ["Clean", "NaN", "Blank", "Outliers", "Negative Values", "Decimals as Text"],
-    "Currency": ["Clean", "NaN", "Blank", "Missing Symbols", "Wrong Decimals", "Negative Values"],
-    "Boolean": ["Clean", "NaN", "Blank", "Text Values (Yes/No)", "0/1 Instead"],
-    "Email": ["Clean", "NaN", "Blank", "Invalid Format", "Missing @", "Typos"],
-    "Name": ["Clean", "NaN", "Blank", "Typos", "All Caps", "Numbers in Name"],
-    "Category": ["Clean", "NaN", "Blank", "Typos", "Inconsistent Labels", "Extra Values"],
-    "Status": ["Clean", "NaN", "Blank", "Typos", "Inconsistent Labels"],
-    "UUID": ["Clean", "NaN", "Blank", "Invalid Format", "Duplicates"],
+    "Date": ["NaN", "Blank", "Different Formats", "Duplicates", "Future Dates"],
+    "Timestamp": ["NaN", "Blank", "Different Formats", "Duplicates", "Timezone Issues"],
+    "String": ["NaN", "Blank", "Typos", "Mixed Case", "Extra Whitespace", "Special Characters", "Duplicates", "Extra Values", "Different Formats"],
+    "Number": ["NaN", "Blank", "Outliers", "Negative Values", "Decimals as Text"],
+    "Currency": ["NaN", "Blank", "Missing Symbols", "Wrong Decimals", "Negative Values"],
+    "Boolean": ["NaN", "Blank", "Text Values (Yes/No)", "0/1 Instead"],
+    "Email": ["NaN", "Blank", "Invalid Format", "Missing @", "Typos"],
+    "Name": ["NaN", "Blank", "Typos", "All Caps", "Numbers in Name", "Duplicates"],
+    "Category": ["NaN", "Blank", "Typos", "Inconsistent Labels", "Extra Values"],
+    "Status": ["NaN", "Blank", "Typos", "Inconsistent Labels"],
+    "UUID": ["NaN", "Blank", "Invalid Format", "Duplicates"],
 }
 
 # Pre-generated AI suggestion prompts for quick access
@@ -155,27 +155,47 @@ AI_SUGGESTIONS = [
 
 PRESETS = {
     "E-commerce": [
-        {"Field Name": "Transaction ID", "Type": "UUID", "Context": "Unique identifier", "Messiness": "Clean", "Messiness %": 0},
-        {"Field Name": "Customer", "Type": "Name", "Context": "First and last name", "Messiness": "Clean", "Messiness %": 0},
-        {"Field Name": "Product", "Type": "Category", "Context": "Electronics, Home, Fashion", "Messiness": "Clean", "Messiness %": 0},
-        {"Field Name": "Amount", "Type": "Currency", "Context": "Min: 10, Max: 500", "Messiness": "Clean", "Messiness %": 0},
-        {"Field Name": "Order Date", "Type": "Date", "Context": "2020-2024, realistic distribution", "Messiness": "Clean", "Messiness %": 0},
+        {"Field Name": "Transaction ID", "Type": "UUID", "Context": "Unique identifier", "Messiness": None, "Messiness %": 0},
+        {"Field Name": "Customer", "Type": "Name", "Context": "First and last name", "Messiness": None, "Messiness %": 0},
+        {"Field Name": "Product", "Type": "Category", "Context": "Electronics, Home, Fashion", "Messiness": None, "Messiness %": 0},
+        {"Field Name": "Amount", "Type": "Currency", "Context": "Min: 10, Max: 500", "Messiness": None, "Messiness %": 0},
+        {"Field Name": "Order Date", "Type": "Date", "Context": "2020-2024, realistic distribution", "Messiness": None, "Messiness %": 0},
     ],
     "Healthcare": [
-        {"Field Name": "Patient ID", "Type": "UUID", "Context": "Unique identifier", "Messiness": "Clean", "Messiness %": 0},
-        {"Field Name": "Diagnosis", "Type": "String", "Context": "ICD-10 codes", "Messiness": "Clean", "Messiness %": 0},
-        {"Field Name": "Admission Date", "Type": "Date", "Context": "Last 12 months", "Messiness": "Clean", "Messiness %": 0},
-        {"Field Name": "Bill", "Type": "Currency", "Context": "Min: 500, Max: 50000", "Messiness": "Clean", "Messiness %": 0},
+        {"Field Name": "Patient ID", "Type": "UUID", "Context": "Unique identifier", "Messiness": None, "Messiness %": 0},
+        {"Field Name": "Diagnosis", "Type": "String", "Context": "ICD-10 codes", "Messiness": None, "Messiness %": 0},
+        {"Field Name": "Admission Date", "Type": "Date", "Context": "Last 12 months", "Messiness": None, "Messiness %": 0},
+        {"Field Name": "Bill", "Type": "Currency", "Context": "Min: 500, Max: 50000", "Messiness": None, "Messiness %": 0},
     ],
     "Finance": [
-        {"Field Name": "Account", "Type": "UUID", "Context": "Unique identifier", "Messiness": "Clean", "Messiness %": 0},
-        {"Field Name": "Transaction Type", "Type": "Category", "Context": "Debit, Credit, Transfer", "Messiness": "Clean", "Messiness %": 0},
-        {"Field Name": "Amount", "Type": "Currency", "Context": "Min: 50, Max: 5000", "Messiness": "Clean", "Messiness %": 0},
-        {"Field Name": "Transaction Date", "Type": "Timestamp", "Context": "Last 3 years", "Messiness": "Clean", "Messiness %": 0},
-        {"Field Name": "Fraud Flag", "Type": "Boolean", "Context": "1% True", "Messiness": "Clean", "Messiness %": 0},
+        {"Field Name": "Account", "Type": "UUID", "Context": "Unique identifier", "Messiness": None, "Messiness %": 0},
+        {"Field Name": "Transaction Type", "Type": "Category", "Context": "Debit, Credit, Transfer", "Messiness": None, "Messiness %": 0},
+        {"Field Name": "Amount", "Type": "Currency", "Context": "Min: 50, Max: 5000", "Messiness": None, "Messiness %": 0},
+        {"Field Name": "Transaction Date", "Type": "Timestamp", "Context": "Last 3 years", "Messiness": None, "Messiness %": 0},
+        {"Field Name": "Fraud Flag", "Type": "Boolean", "Context": "1% True", "Messiness": None, "Messiness %": 0},
+    ],
+    "CRM (Messy Data Practice)": [
+        {"Field Name": "Lead ID", "Type": "UUID", "Context": "Unique identifier", "Messiness": "Blank", "Messiness %": 5},
+        {"Field Name": "Company Name", "Type": "String", "Context": "Business names", "Messiness": "Duplicates", "Messiness %": 15},
+        {"Field Name": "Contact Name", "Type": "Name", "Context": "First and last name", "Messiness": "Duplicates", "Messiness %": 10},
+        {"Field Name": "Email", "Type": "Email", "Context": "Business emails", "Messiness": "Invalid Format", "Messiness %": 20},
+        {"Field Name": "Phone", "Type": "String", "Context": "10-digit US format", "Messiness": "Different Formats", "Messiness %": 25},
+        {"Field Name": "Lead Status", "Type": "Status", "Context": "New, Contacted, Qualified, Lost", "Messiness": "Inconsistent Labels", "Messiness %": 15},
+        {"Field Name": "Deal Value", "Type": "Currency", "Context": "Min: 1000, Max: 100000", "Messiness": "NaN", "Messiness %": 10},
+        {"Field Name": "Last Contact Date", "Type": "Date", "Context": "Last 6 months", "Messiness": "Blank", "Messiness %": 20},
+    ],
+    "Education (Messy Data Practice)": [
+        {"Field Name": "Student ID", "Type": "UUID", "Context": "Unique identifier", "Messiness": "Duplicates", "Messiness %": 5},
+        {"Field Name": "Student Name", "Type": "Name", "Context": "First and last name", "Messiness": "All Caps", "Messiness %": 30},
+        {"Field Name": "Email", "Type": "Email", "Context": "School email addresses", "Messiness": "Typos", "Messiness %": 15},
+        {"Field Name": "Grade Level", "Type": "Category", "Context": "Freshman, Sophomore, Junior, Senior", "Messiness": "Typos", "Messiness %": 10},
+        {"Field Name": "GPA", "Type": "Number", "Context": "Min: 0.0, Max: 4.0", "Messiness": "NaN", "Messiness %": 15},
+        {"Field Name": "Enrollment Date", "Type": "Date", "Context": "Last 4 years", "Messiness": "Different Formats", "Messiness %": 20},
+        {"Field Name": "Active Status", "Type": "Boolean", "Context": "90% True", "Messiness": "Text Values (Yes/No)", "Messiness %": 25},
+        {"Field Name": "Major", "Type": "String", "Context": "STEM, Business, Liberal Arts, etc", "Messiness": "Extra Whitespace", "Messiness %": 20},
     ],
     "Custom": [
-        {"Field Name": "ID", "Type": "UUID", "Context": "", "Messiness": "Clean", "Messiness %": 0},
+        {"Field Name": "ID", "Type": "UUID", "Context": "", "Messiness": None, "Messiness %": 0},
     ]
 }
 
@@ -368,8 +388,8 @@ def preview_dataset(industry, fields_data):
     messiness_instructions = []
     for _, row in fields_data.iterrows():
         field_desc.append(f"{row['Field Name']} ({row['Type']}): {row['Context']}")
-        messiness = row.get('Messiness', 'Clean')
-        if messiness != "Clean":
+        messiness = row.get('Messiness', None)
+        if messiness and pd.notna(messiness):
             messiness_pct = row.get('Messiness %', 15)
             messiness_instructions.append(f"  - {row['Field Name']}: Apply '{messiness}' ({messiness_pct}% of rows)")
     
@@ -475,8 +495,8 @@ def generate_dataset(industry, rows, fields_data):
     messiness_instructions = []
     for _, row in fields_data.iterrows():
         field_desc.append(f"{row['Field Name']} ({row['Type']}): {row['Context']}")
-        messiness = row.get('Messiness', 'Clean')
-        if messiness != "Clean":
+        messiness = row.get('Messiness', None)
+        if messiness and pd.notna(messiness):
             messiness_pct = row.get('Messiness %', 15)
             messiness_instructions.append(f"  - {row['Field Name']}: Apply '{messiness}' ({messiness_pct}% of rows)")
     
@@ -584,6 +604,20 @@ with st.sidebar:
     # Developer aid: exceptions are shown in the UI for local debugging.
     preview_btn = st.button("👁️ Preview (10 rows)", use_container_width=True)
     generate_btn = st.button("🚀 Generate Data", use_container_width=True, type="primary")
+    
+    st.divider()
+    
+    # Watermark / Credits
+    st.markdown(
+        """
+        <div style='text-align: center; color: #666; font-size: 0.85em;'>
+            Designed by <a href='https://www.linkedin.com/in/zacharyjball/' target='_blank' style='text-decoration: none;'>Zachary Ball</a><br>
+            <a href='https://github.com/zjrball' target='_blank' style='text-decoration: none;'>GitHub</a> • 
+            <a href='https://www.linkedin.com/in/zacharyjball/' target='_blank' style='text-decoration: none;'>LinkedIn</a>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 # Main Content
 st.header("Schema Configuration")
@@ -623,9 +657,13 @@ st.caption(f"{field_limit_color} Fields: {field_count}/{MAX_FIELDS}")
 # Show messiness options guide
 with st.expander("ℹ️ Messiness Options by Field Type"):
     st.markdown("""
+    **Messiness Percentage**: Set 0-100% for each field. Higher percentages = more messy data.
+    
+    ⚠️ **Note**: Only messiness types valid for the selected field Type will be accepted. Invalid selections will be cleared on generate.
+    
     **Date/Timestamp**: NaN, Blank, Different Formats, Duplicates, Future Dates, Timezone Issues
     
-    **String**: NaN, Blank, Typos, Mixed Case, Extra Whitespace, Special Characters
+    **String**: NaN, Blank, Typos, Mixed Case, Extra Whitespace, Special Characters, Duplicates, Extra Values, Different Formats
     
     **Number/Currency**: NaN, Blank, Outliers, Negative Values, Decimals as Text, Missing Symbols, Wrong Decimals
     
@@ -633,7 +671,7 @@ with st.expander("ℹ️ Messiness Options by Field Type"):
     
     **Email**: NaN, Blank, Invalid Format, Missing @, Typos
     
-    **Name**: NaN, Blank, Typos, All Caps, Numbers in Name
+    **Name**: NaN, Blank, Typos, All Caps, Numbers in Name, Duplicates
     
     **Category/Status**: NaN, Blank, Typos, Inconsistent Labels, Extra Values
     
@@ -642,12 +680,12 @@ with st.expander("ℹ️ Messiness Options by Field Type"):
 
 # Ensure Messiness column exists in session state
 if 'Messiness' not in st.session_state.fields_df.columns:
-    st.session_state.fields_df['Messiness'] = 'Clean'
+    st.session_state.fields_df['Messiness'] = None
 if 'Messiness %' not in st.session_state.fields_df.columns:
     st.session_state.fields_df['Messiness %'] = 0
 
 # Collect all unique messiness options across all field types
-all_messiness_options = ["Clean"]
+all_messiness_options = []
 for options in MESSINESS_OPTIONS.values():
     for opt in options:
         if opt not in all_messiness_options:
@@ -675,7 +713,7 @@ edited_df = st.data_editor(
         ),
         "Messiness %": st.column_config.NumberColumn(
             "Messiness %",
-            help="Percentage of rows with this quality issue (0-100)",
+            help="Percentage of rows with this quality issue (0-100%). Higher percentages create dirtier data.",
             min_value=0,
             max_value=100,
             step=5,
@@ -684,49 +722,60 @@ edited_df = st.data_editor(
     }
 )
 
-# Post-process to ensure Messiness column has appropriate options per Type
-# and auto-number new rows with blank Field Names
-for idx, row in edited_df.iterrows():
-    field_type = row.get('Type', 'String')
-    current_messiness = row.get('Messiness', 'Clean')
-    field_name = row.get('Field Name', '')
-    
-    # Auto-number blank Field Names
-    if field_name == '' or pd.isna(field_name):
-        edited_df.at[idx, 'Field Name'] = f"Field {idx + 1}"
-    
-    valid_options = MESSINESS_OPTIONS.get(field_type, ["Clean"])
-    # If current messiness is not valid for this type, reset to Clean and percentage to 0
-    if current_messiness not in valid_options:
-        edited_df.at[idx, 'Messiness'] = 'Clean'
-        edited_df.at[idx, 'Messiness %'] = 0
-
-# Enforce field limit by truncating excess rows
-if len(edited_df) > MAX_FIELDS:
-    st.warning(f"⚠️ Field limit exceeded! Only the first {MAX_FIELDS} fields will be kept.")
-    edited_df = edited_df.head(MAX_FIELDS)
-
-# Update session state when rows are edited or deleted
-st.session_state.fields_df = edited_df
+# Only update session state if row count changed (rows added/deleted)
+# Don't update on every cell edit to prevent refresh issues
+if len(edited_df) != len(st.session_state.fields_df):
+    st.session_state.fields_df = edited_df.copy()
 
 # Update field count after processing
-updated_field_count = len(edited_df)
+updated_field_count = len(st.session_state.fields_df)
 if updated_field_count >= MAX_FIELDS:
     st.info(f"ℹ️ Field limit ({MAX_FIELDS}) reached. Remove fields to add more.")
 
+# Use edited_df for generation (which includes all current edits)
+working_df = edited_df
+
+# Validation and processing function - only runs when generate/preview is clicked
+def validate_and_process_schema(df):
+    """Validate and clean up the schema before generation."""
+    processed_df = df.copy()
+    
+    # Auto-number blank Field Names
+    for idx, row in processed_df.iterrows():
+        field_type = row.get('Type', 'String')
+        current_messiness = row.get('Messiness', None)
+        field_name = row.get('Field Name', '')
+        
+        # Auto-number blank Field Names
+        if field_name == '' or pd.isna(field_name):
+            processed_df.at[idx, 'Field Name'] = f"Field {idx + 1}"
+        
+        # Validate messiness is appropriate for field type
+        if current_messiness and pd.notna(current_messiness):
+            valid_options = MESSINESS_OPTIONS.get(field_type, [])
+            if current_messiness not in valid_options:
+                st.warning(f"⚠️ '{current_messiness}' is not valid for {field_type} type in row {idx + 1}. Using clean data instead.")
+                processed_df.at[idx, 'Messiness'] = None
+                processed_df.at[idx, 'Messiness %'] = 0
+    
+    # Enforce field limit
+    if len(processed_df) > MAX_FIELDS:
+        st.error(f"❌ Maximum {MAX_FIELDS} fields allowed. Truncating to first {MAX_FIELDS} fields.")
+        processed_df = processed_df.head(MAX_FIELDS)
+    
+    return processed_df
+
 # Handle Preview Trigger
 if preview_btn:
-    if len(edited_df) > MAX_FIELDS:
-        st.error(f"❌ Cannot generate: {len(edited_df)} fields exceed the {MAX_FIELDS} field limit.")
-    else:
-        preview_dataset(selected_preset, edited_df)
+    validated_df = validate_and_process_schema(working_df)
+    if len(validated_df) > 0:
+        preview_dataset(selected_preset, validated_df)
 
 # Handle Generation Trigger
 if generate_btn:
-    if len(edited_df) > MAX_FIELDS:
-        st.error(f"❌ Cannot generate: {len(edited_df)} fields exceed the {MAX_FIELDS} field limit.")
-    else:
-        generate_dataset(selected_preset, row_count, edited_df)
+    validated_df = validate_and_process_schema(working_df)
+    if len(validated_df) > 0:
+        generate_dataset(selected_preset, row_count, validated_df)
 
 # Results Section
 if st.session_state.generated_data is not None:
@@ -745,7 +794,10 @@ if st.session_state.generated_data is not None:
         )
     
     # Data Preview
-    st.dataframe(st.session_state.generated_data, use_container_width=True)
+    # Reset index to start from 1 instead of 0 for better readability
+    display_df = st.session_state.generated_data.copy()
+    display_df.index = range(1, len(display_df) + 1)
+    st.dataframe(display_df, use_container_width=True)
 
 elif not api_key:
     st.warning("Please enter a Gemini API Key in the sidebar to start generating.")
