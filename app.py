@@ -16,6 +16,7 @@ import json
 import io
 import time
 import os
+from datetime import datetime
 
 # --- Configuration ---
 st.set_page_config(
@@ -211,7 +212,39 @@ if "generated_data" not in st.session_state:
 if "ai_prompt_text" not in st.session_state:
     st.session_state.ai_prompt_text = ""
 
+if "last_generated" not in st.session_state:
+    st.session_state.last_generated = None
+
 # --- Logic ---
+
+def get_context_hint(field_type):
+    """Return helpful context examples based on field type."""
+    hints = {
+        "Date": "💡 Examples: 'Last 5 years', '2020-2024', 'Last 6 months'",
+        "Timestamp": "💡 Examples: 'Last 3 years', '2020-2024 with time'",
+        "Number": "💡 Examples: 'Min: 1, Max: 100', 'Between 0 and 1000'",
+        "Currency": "💡 Examples: 'Min: 10, Max: 500', '$2-$8'",
+        "Category": "💡 Examples: 'Electronics, Home, Fashion' (specific options)",
+        "Boolean": "💡 Examples: '90% True', '10% False', Binary values",
+        "Email": "💡 Examples: 'Business emails', 'Gmail domains'",
+        "Name": "💡 Examples: 'First and last name', 'Full names'",
+        "Status": "💡 Examples: 'Active, Pending, Closed' (specific statuses)",
+        "UUID": "💡 Examples: 'Unique identifier', 'Auto-generated IDs'",
+        "String": "💡 Examples: 'Short description', 'Max 50 characters'",
+    }
+    return hints.get(field_type, "💡 Provide a description for this field")
+
+def get_preset_description(preset_name):
+    """Return a brief description of what each preset contains."""
+    descriptions = {
+        "E-commerce": "🛒 Transaction ID, Customer, Product, Amount, Order Date (5 clean fields)",
+        "Healthcare": "🏥 Patient ID, Diagnosis, Admission Date, Bill (4 clean fields)",
+        "Finance": "💰 Account, Transaction Type, Amount, Date, Fraud Flag (5 clean fields)",
+        "CRM (Messy Data Practice)": "👥 Lead ID, Company, Contact, Email, Phone, Status, Deal Value, Last Contact (8 messy fields)",
+        "Education (Messy Data Practice)": "🎓 Student ID, Name, Email, Grade, GPA, Enrollment, Status, Major (8 messy fields)",
+        "Custom": "⚙️ Start with a single ID field and customize",
+    }
+    return descriptions.get(preset_name, "")
 
 def calculate_eta(row_count, field_count=1):
     """Return a human-friendly ETA string for generation.
@@ -288,7 +321,18 @@ def generate_schema_from_prompt(prompt_text, num_fields=5):
         st.error("Please describe your dataset before using Auto-Fill")
         return
 
-    with st.spinner("Dreaming up schema..."):
+    progress_container = st.container()
+    with progress_container:
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        status_text.text("🤖 Analyzing prompt... (10%)")
+        progress_bar.progress(10)
+        time.sleep(0.3)
+        
+        status_text.text("🧠 Generating schema... (40%)")
+        progress_bar.progress(40)
+        
         model = get_model()
         # System prompt: be explicit and restrictive. In many cases the model
         # produces helpful output but can also include prose or wrappers; we
@@ -311,6 +355,11 @@ def generate_schema_from_prompt(prompt_text, num_fields=5):
             # mode is enabled).
             response = model.generate_content(sys_prompt)
             raw_text = response.text
+            
+            status_text.text("📝 Parsing JSON... (70%)")
+            progress_bar.progress(70)
+            time.sleep(0.2)
+            
             # Model may include markdown code fences like ```json```; strip them.
             clean_json = raw_text.replace("```json", "").replace("```", "").strip()
             try:
@@ -318,12 +367,18 @@ def generate_schema_from_prompt(prompt_text, num_fields=5):
             except json.JSONDecodeError as jde:
                 # Parsing failed: show a truncated sample and the JSON error
                 # so local developers can quickly iterate on prompts.
+                progress_bar.empty()
+                status_text.empty()
                 sample = (raw_text[:1000] + "...") if len(raw_text) > 1000 else raw_text
                 st.error("Failed to parse model JSON output. Sample below (truncated):")
                 st.code(sample)
                 st.exception(jde)
                 return
 
+            status_text.text("✔️ Validating schema... (85%)")
+            progress_bar.progress(85)
+            time.sleep(0.2)
+            
             # Validate schema structure before accepting it. This prevents
             # malformed or unsafe schema objects from being written into
             # session state.
@@ -331,6 +386,8 @@ def generate_schema_from_prompt(prompt_text, num_fields=5):
             if not valid:
                 # Show the failing reason and a short sample to help local
                 # debugging and prompt tuning.
+                progress_bar.empty()
+                status_text.empty()
                 sample = (raw_text[:1000] + "...") if len(raw_text) > 1000 else raw_text
                 st.error(f"Schema validation failed: {msg}")
                 st.code(sample)
@@ -340,15 +397,27 @@ def generate_schema_from_prompt(prompt_text, num_fields=5):
             if len(schema) > num_fields:
                 st.warning(f"⚠️ AI suggested {len(schema)} fields. Trimming to {num_fields} fields as requested.")
                 schema = schema[:num_fields]
+            
+            status_text.text("✔️ Finalizing... (95%)")
+            progress_bar.progress(95)
+            time.sleep(0.2)
 
             # Validate trimmed schema as well (in case trimming removed valid
             # fields but left invalid items).
             valid_trim, msg_trim = validate_schema(schema)
             if not valid_trim:
+                progress_bar.empty()
+                status_text.empty()
                 st.error(f"Trimmed schema invalid: {msg_trim}")
                 return
 
             # Record suggested count in-memory only.
+            
+            status_text.text("✅ Schema ready! (100%)")
+            progress_bar.progress(100)
+            time.sleep(0.5)
+            progress_bar.empty()
+            status_text.empty()
 
             # Persist the proposed schema to session state and force a
             # rerun so the editor UI reflects the new rows immediately.
@@ -423,12 +492,12 @@ def preview_dataset(industry, fields_data):
     try:
         # Request preview from the model and aggressively strip common
         # markdown wrappers. We still protect parsing with pandas.
-        status_text.text("🤖 Generating 10-row preview...")
+        status_text.text("🤖 Generating 10-row preview... (20%)")
         progress_bar.progress(20)
         response = model.generate_content(prompt)
         csv_text = response.text.replace("```csv", "").replace("```", "").strip()
 
-        status_text.text("📊 Parsing CSV data...")
+        status_text.text("📊 Parsing CSV data... (60%)")
         progress_bar.progress(60)
 
         # Parse and display with error handling
@@ -441,7 +510,7 @@ def preview_dataset(industry, fields_data):
                 st.error("Preview failed: No valid rows generated. Please try again.")
                 return
 
-            status_text.text("🔒 Sanitizing data...")
+            status_text.text("🔒 Sanitizing data... (80%)")
             progress_bar.progress(80)
 
             # Sanitize the resulting DataFrame to mitigate CSV injection
@@ -528,13 +597,13 @@ Output: CSV with headers only, no markdown."""
 
     try:
         # 1. Generate Data: request CSV text from the model.
-        status_text.text(f"🤖 Generating {rows} rows with {len(field_desc)} fields...")
-        progress_bar.progress(20)
+        status_text.text(f"🤖 Generating {rows} rows with {len(field_desc)} fields... (30%)")
+        progress_bar.progress(30)
         # Local generation request
         response = model.generate_content(prompt)
         csv_text = response.text.replace("```csv", "").replace("```", "").strip()
 
-        status_text.text("📊 Parsing CSV data...")
+        status_text.text("📊 Parsing CSV data... (60%)")
         progress_bar.progress(60)
 
         # 2. Parse and Store: robust parsing as in preview (skip bad lines).
@@ -551,7 +620,7 @@ Output: CSV with headers only, no markdown."""
             elif len(df) < rows:
                 st.warning(f"⚠️ AI generated only {len(df)} rows instead of {rows}.")
 
-            status_text.text("🔒 Sanitizing data...")
+            status_text.text("🔒 Sanitizing data... (80%)")
             progress_bar.progress(80)
 
             # Sanitize before storing/downloading to mitigate CSV injection.
@@ -569,6 +638,8 @@ Output: CSV with headers only, no markdown."""
         time.sleep(0.5)
         progress_bar.empty()
         status_text.empty()
+        # Record generation timestamp
+        st.session_state.last_generated = datetime.now()
         st.rerun()
 
     except Exception as e:
@@ -580,6 +651,12 @@ Output: CSV with headers only, no markdown."""
 # Sidebar
 with st.sidebar:
     st.title("DataGenius ⚡")
+    
+    # Preset Preview Cards
+    with st.expander("📋 Preset Previews", expanded=False):
+        for preset_name in PRESETS.keys():
+            description = get_preset_description(preset_name)
+            st.markdown(f"**{preset_name}**\n`{description}`")
     
     selected_preset = st.selectbox(
         "Industry Preset", 
@@ -654,28 +731,79 @@ field_count = len(st.session_state.fields_df)
 field_limit_color = "🟢" if field_count <= MAX_FIELDS else "🔴"
 st.caption(f"{field_limit_color} Fields: {field_count}/{MAX_FIELDS}")
 
+# Quick Actions
+st.caption("⚡ Quick Actions:")
+col_qa1, col_qa2, col_qa3 = st.columns(3)
+with col_qa1:
+    if st.button("🧹 Clear Messiness", help="Reset all fields to clean data (0% messiness)", key="clear_messiness"):
+        for idx in range(len(st.session_state.fields_df)):
+            st.session_state.fields_df.at[idx, 'Messiness'] = None
+            st.session_state.fields_df.at[idx, 'Messiness %'] = 0
+        st.success("✅ Clearing all fields to clean...")
+        time.sleep(1)
+        st.rerun()
+with col_qa2:
+    if st.button("📊 Add 10% Messiness", help="Apply 10% random messiness to all fields", key="add_messiness"):
+        for idx, row in st.session_state.fields_df.iterrows():
+            field_type = row.get('Type', 'String')
+            valid_options = MESSINESS_OPTIONS.get(field_type, [])
+            current_messiness = row.get('Messiness')
+            current_pct = row.get('Messiness %', 0) or 0
+            
+            # Only add messiness if field doesn't already have a messiness type set
+            if not current_messiness or pd.isna(current_messiness) or current_messiness == '':
+                if valid_options and len(valid_options) > 0:
+                    st.session_state.fields_df.at[idx, 'Messiness'] = valid_options[0]
+                    st.session_state.fields_df.at[idx, 'Messiness %'] = 10
+            else:
+                # If already has a messiness type, just increase percentage by 10% (capped at 100%)
+                new_pct = min(current_pct + 10, 100)
+                st.session_state.fields_df.at[idx, 'Messiness %'] = new_pct
+        st.success("✅ Adding 10% messiness to all fields...")
+        time.sleep(1)
+        st.rerun()
+with col_qa3:
+    if st.button("🔄 Reset to Preset", help="Reload the current preset", key="reset_preset"):
+        st.session_state.fields_df = pd.DataFrame(PRESETS[selected_preset])
+        st.success(f"✅ Resetting to {selected_preset} preset...")
+        time.sleep(1)
+        st.rerun()
+
+# Validation Status Summary
+if field_count > 0:
+    messiness_count = len(st.session_state.fields_df[st.session_state.fields_df['Messiness'].notna()])
+    clean_count = field_count - messiness_count
+    status_line = f"✅ {clean_count} clean | ⚠️ {messiness_count} with quality issues"
+    st.caption(status_line)
+
 # Show messiness options guide
 with st.expander("ℹ️ Messiness Options by Field Type"):
     st.markdown("""
     **Messiness Percentage**: Set 0-100% for each field. Higher percentages = more messy data.
     
-    ⚠️ **Note**: Only messiness types valid for the selected field Type will be accepted. Invalid selections will be cleared on generate.
+    ### Data Types & Valid Messiness Options:
     
-    **Date/Timestamp**: NaN, Blank, Different Formats, Duplicates, Future Dates, Timezone Issues
+    📅 **Date**: NaN, Blank, Different Formats, Duplicates, Future Dates
     
-    **String**: NaN, Blank, Typos, Mixed Case, Extra Whitespace, Special Characters, Duplicates, Extra Values, Different Formats
+    ⏰ **Timestamp**: NaN, Blank, Different Formats, Duplicates, Timezone Issues
     
-    **Number/Currency**: NaN, Blank, Outliers, Negative Values, Decimals as Text, Missing Symbols, Wrong Decimals
+    📝 **String**: NaN, Blank, Typos, Mixed Case, Extra Whitespace, Special Characters, Duplicates, Extra Values, Different Formats
     
-    **Boolean**: NaN, Blank, Text Values (Yes/No), 0/1 Instead
+    🔢 **Number**: NaN, Blank, Outliers, Negative Values, Decimals as Text
     
-    **Email**: NaN, Blank, Invalid Format, Missing @, Typos
+    💵 **Currency**: NaN, Blank, Missing Symbols, Wrong Decimals, Negative Values
     
-    **Name**: NaN, Blank, Typos, All Caps, Numbers in Name, Duplicates
+    ✓ **Boolean**: NaN, Blank, Text Values (Yes/No), 0/1 Instead
     
-    **Category/Status**: NaN, Blank, Typos, Inconsistent Labels, Extra Values
+    📧 **Email**: NaN, Blank, Invalid Format, Missing @, Typos
     
-    **UUID**: NaN, Blank, Invalid Format, Duplicates
+    👤 **Name**: NaN, Blank, Typos, All Caps, Numbers in Name, Duplicates
+    
+    🏷️ **Category**: NaN, Blank, Typos, Inconsistent Labels, Extra Values
+    
+    🔖 **Status**: NaN, Blank, Typos, Inconsistent Labels
+    
+    🆔 **UUID**: NaN, Blank, Invalid Format, Duplicates
     """)
 
 # Ensure Messiness column exists in session state
@@ -690,6 +818,58 @@ for options in MESSINESS_OPTIONS.values():
     for opt in options:
         if opt not in all_messiness_options:
             all_messiness_options.append(opt)
+
+# Function to validate a single field
+def get_field_validation_status(field_name, field_type, messiness, messiness_pct):
+    """Return validation status icon and message for a field."""
+    if not field_name or field_name.strip() == "":
+        return "⚠️", "Missing field name"
+    if not field_type or field_type.strip() == "":
+        return "⚠️", "Missing field type"
+    
+    # Check if messiness is valid for the field type
+    if messiness and messiness.strip() != "":
+        valid_options = MESSINESS_OPTIONS.get(field_type, [])
+        if messiness not in valid_options:
+            return "⚠️", f"'{messiness}' not valid for {field_type}"
+    
+    # If messiness is set but percentage is 0, that's a warning
+    if messiness and messiness.strip() != "" and (messiness_pct is None or messiness_pct == 0):
+        return "⚠️", "Messiness set but % is 0"
+    
+    # All valid
+    return "✅", "Valid"
+
+# Display validation summary before editor
+st.subheader("Field Validation Status")
+validation_data = []
+for idx, row in st.session_state.fields_df.iterrows():
+    status_icon, status_msg = get_field_validation_status(
+        row.get("Field Name", ""),
+        row.get("Type", ""),
+        row.get("Messiness"),
+        row.get("Messiness %", 0)
+    )
+    validation_data.append({
+        "Row": idx + 1,
+        "Status": status_icon,
+        "Field Name": row.get("Field Name", ""),
+        "Type": row.get("Type", ""),
+        "Message": status_msg
+    })
+
+if validation_data:
+    validation_df = pd.DataFrame(validation_data)
+    # Display with custom styling - show only if there are warnings
+    has_warnings = any("⚠️" in row["Status"] for row in validation_data)
+    if has_warnings:
+        st.dataframe(
+            validation_df[["Row", "Status", "Field Name", "Type", "Message"]],
+            use_container_width=True,
+            hide_index=True
+        )
+    else:
+        st.caption("✅ All fields are valid!")
 
 edited_df = st.data_editor(
     st.session_state.fields_df,
@@ -726,6 +906,19 @@ edited_df = st.data_editor(
 # Don't update on every cell edit to prevent refresh issues
 if len(edited_df) != len(st.session_state.fields_df):
     st.session_state.fields_df = edited_df.copy()
+
+# Check if messiness or type changed in any row to trigger rerun for validation update
+messiness_changed = False
+for idx, row in edited_df.iterrows():
+    if idx < len(st.session_state.fields_df):
+        old_row = st.session_state.fields_df.iloc[idx]
+        if row.get('Messiness') != old_row.get('Messiness') or row.get('Type') != old_row.get('Type'):
+            messiness_changed = True
+            break
+
+if messiness_changed:
+    st.session_state.fields_df = edited_df.copy()
+    st.rerun()
 
 # Update field count after processing
 updated_field_count = len(st.session_state.fields_df)
@@ -780,9 +973,17 @@ if generate_btn:
 # Results Section
 if st.session_state.generated_data is not None:
     st.divider()
-    col_header, col_download = st.columns([3, 1])
+    col_header, col_timestamp, col_download = st.columns([2, 2, 1])
     with col_header:
         st.subheader("Results")
+    with col_timestamp:
+        if st.session_state.last_generated:
+            time_diff = (datetime.now() - st.session_state.last_generated).total_seconds()
+            if time_diff < 60:
+                time_str = f"{int(time_diff)}s ago"
+            else:
+                time_str = st.session_state.last_generated.strftime("%I:%M %p")
+            st.caption(f"⏰ Generated: {time_str}")
     with col_download:
         csv = st.session_state.generated_data.to_csv(index=False).encode('utf-8')
         st.download_button(
@@ -800,4 +1001,4 @@ if st.session_state.generated_data is not None:
     st.dataframe(display_df, use_container_width=True)
 
 elif not api_key:
-    st.warning("Please enter a Gemini API Key in the sidebar to start generating.")
+    st.info("🔑 **Getting Started:**\n\n1. Enter your Gemini API Key in the sidebar\n2. Choose an industry preset or customize fields\n3. Click Preview to see 10 rows\n4. Click Generate Data to download your dataset\n\n💡 **Tip:** Start with a preset, then try the Quick Actions to add messiness!")
