@@ -6,9 +6,12 @@ Markdown
 ![Gemini API](https://img.shields.io/badge/AI-Google%20Gemini-orange)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/zjrball/DataGenius/blob/main/LICENSE.txt)
 
-> **Simulate reality, safely.** DataGenius uses AI to generate realistic datasets on demand—solving privacy risks while giving you full control over data quality (Clean vs. Dirty).
+> **🚧 Status: Public Beta (v0.1.0)**
+> *This tool is in active development. Usage is currently local-only. Please report any bugs via GitHub Issues!*
 
-<img width="1893" height="731" alt="Screenshot 2025-12-09 081843" src="https://github.com/user-attachments/assets/3731a2f3-ba8d-4d0e-a9fb-29cd7adcce64" />
+> **Simulate reality, safely.** DataGenius uses AI to generate realistic datasets on demand, solving privacy risks while giving you full control over data quality (Clean vs. Dirty).
+
+<img width="1352" height="868" alt="image" src="https://github.com/user-attachments/assets/1fd11b99-2494-41de-831b-bb2b5eff400e" />
 
 ---
 
