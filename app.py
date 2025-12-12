@@ -822,19 +822,47 @@ for options in MESSINESS_OPTIONS.values():
 # Function to validate a single field
 def get_field_validation_status(field_name, field_type, messiness, messiness_pct):
     """Return validation status icon and message for a field."""
+    # Ensure field_name is a string
+    field_name = str(field_name) if field_name and not pd.isna(field_name) else ""
+    # Ensure field_type is a string
+    field_type = str(field_type) if field_type and not pd.isna(field_type) else ""
+    field_type = field_type.strip()
+    
     if not field_name or field_name.strip() == "":
         return "⚠️", "Missing field name"
-    if not field_type or field_type.strip() == "":
+    if not field_type or field_type == "":
         return "⚠️", "Missing field type"
     
+    # Ensure messiness is a string (it might be a list or other type from data_editor)
+    if isinstance(messiness, list):
+        messiness = messiness[0] if messiness else None
+    
+    # Handle pandas NA values
+    if pd.isna(messiness):
+        messiness = None
+    elif messiness:
+        messiness = str(messiness).strip()
+    
     # Check if messiness is valid for the field type
-    if messiness and messiness.strip() != "":
-        valid_options = MESSINESS_OPTIONS.get(field_type, [])
-        if messiness not in valid_options:
-            return "⚠️", f"'{messiness}' not valid for {field_type}"
+    if messiness and messiness != "" and messiness != "None":
+        # Find the correct field type key (case-insensitive)
+        correct_field_type = None
+        for key in MESSINESS_OPTIONS.keys():
+            if key.lower() == field_type.lower():
+                correct_field_type = key
+                break
+        
+        if correct_field_type:
+            valid_options = MESSINESS_OPTIONS[correct_field_type]
+            # Case-insensitive comparison for safety
+            messiness_match = any(m.lower() == messiness.lower() for m in valid_options)
+            if not messiness_match:
+                return "⚠️", f"'{messiness}' not valid for {field_type}"
+        else:
+            return "⚠️", f"Unknown field type: {field_type}"
     
     # If messiness is set but percentage is 0, that's a warning
-    if messiness and messiness.strip() != "" and (messiness_pct is None or messiness_pct == 0):
+    if messiness and messiness != "" and messiness != "None" and (messiness_pct is None or messiness_pct == 0):
         return "⚠️", "Messiness set but % is 0"
     
     # All valid
@@ -871,8 +899,15 @@ if validation_data:
     else:
         st.caption("✅ All fields are valid!")
 
+# Clean up dataframe before editor: convert list values to scalar values
+df_for_editor = st.session_state.fields_df.copy()
+for col in df_for_editor.columns:
+    df_for_editor[col] = df_for_editor[col].apply(
+        lambda x: x[0] if isinstance(x, list) and len(x) > 0 else x
+    )
+
 edited_df = st.data_editor(
-    st.session_state.fields_df,
+    df_for_editor,
     num_rows="dynamic",
     use_container_width=True,
     column_config={
@@ -912,7 +947,19 @@ messiness_changed = False
 for idx, row in edited_df.iterrows():
     if idx < len(st.session_state.fields_df):
         old_row = st.session_state.fields_df.iloc[idx]
-        if row.get('Messiness') != old_row.get('Messiness') or row.get('Type') != old_row.get('Type'):
+        # Use a safe comparison that handles pandas NA values
+        row_messiness = row.get('Messiness')
+        old_messiness = old_row.get('Messiness')
+        row_type = row.get('Type')
+        old_type = old_row.get('Type')
+        
+        # Compare safely by converting NA to None
+        row_messiness_val = None if pd.isna(row_messiness) else row_messiness
+        old_messiness_val = None if pd.isna(old_messiness) else old_messiness
+        row_type_val = None if pd.isna(row_type) else row_type
+        old_type_val = None if pd.isna(old_type) else old_type
+        
+        if row_messiness_val != old_messiness_val or row_type_val != old_type_val:
             messiness_changed = True
             break
 
@@ -945,11 +992,22 @@ def validate_and_process_schema(df):
         
         # Validate messiness is appropriate for field type
         if current_messiness and pd.notna(current_messiness):
-            valid_options = MESSINESS_OPTIONS.get(field_type, [])
-            if current_messiness not in valid_options:
-                st.warning(f"⚠️ '{current_messiness}' is not valid for {field_type} type in row {idx + 1}. Using clean data instead.")
-                processed_df.at[idx, 'Messiness'] = None
-                processed_df.at[idx, 'Messiness %'] = 0
+            # Find the correct field type key (case-insensitive)
+            correct_field_type = None
+            for key in MESSINESS_OPTIONS.keys():
+                if key.lower() == field_type.lower():
+                    correct_field_type = key
+                    break
+            
+            if correct_field_type:
+                valid_options = MESSINESS_OPTIONS[correct_field_type]
+                # Case-insensitive comparison with whitespace trimming
+                current_messiness_str = str(current_messiness).strip().lower()
+                messiness_match = any(m.lower() == current_messiness_str for m in valid_options)
+                if not messiness_match:
+                    st.warning(f"⚠️ '{current_messiness}' is not valid for {field_type} type in row {idx + 1}. Using clean data instead.")
+                    processed_df.at[idx, 'Messiness'] = None
+                    processed_df.at[idx, 'Messiness %'] = 0
     
     # Enforce field limit
     if len(processed_df) > MAX_FIELDS:
