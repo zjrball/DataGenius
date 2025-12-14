@@ -17,7 +17,7 @@ Markdown
 
 ## Quick Start Guide
 
-Watch the **[YouTube Tutorial](LINK_HERE)** for a step-by-step walkthrough.
+Watch the **[YouTube Tutorial](https://youtu.be/3Xdc1ke9etE)** for a step-by-step walkthrough.
 
 ---
 
